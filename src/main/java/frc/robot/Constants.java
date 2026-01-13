@@ -109,6 +109,11 @@ public final class Constants {
         public static final double SHOOTER_SPINUP_RPM = 3000;
         public static final double SHOOTER_MAX_RPM = 5000;
         
+        public static final double SHOOTER_IDLE_SPEED = 0;
+        public static final double SHOOTER_SPINUP_SPEED = 0.6;
+        public static final double SHOOTER_FIRING_SPEED = 0.8;
+        
+
         // RPM tolerance for "at setpoint" check
         public static final double SHOOTER_RPM_TOLERANCE = 100;
         
