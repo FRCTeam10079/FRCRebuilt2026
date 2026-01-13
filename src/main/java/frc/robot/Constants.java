@@ -16,7 +16,7 @@ public final class Constants {
     public static final class GameConstants {
         // Match period durations (seconds)
         public static final double AUTO_DURATION = 20.0;  // 0:00 - 0:20
-        public static final double TELEOP_DURATION = 150.0;  // 2:30 total
+        public static final double TELEOP_DURATION = 140.0;  // 2: total
         public static final double ENDGAME_THRESHOLD = 30.0;  // Last 30 seconds
         
         // Hub Shift timing (transition period where both hubs are active)
@@ -29,9 +29,9 @@ public final class Constants {
         // NO max capacity during gameplay - robots can hoard unlimited fuel!
         
         // Climb scoring
-        public static final int CLIMB_L1_POINTS = 15;  // Level 1 climb points
-        public static final int CLIMB_L2_POINTS = 30;  // Level 2 climb points (estimated)
-        public static final int CLIMB_L3_POINTS = 50;  // Level 3 climb points (estimated)
+        public static final int CLIMB_L1_POINTS = 10;  // Level 1 climb points(if auto 15 points)
+        public static final int CLIMB_L2_POINTS = 20;  // Level 2 climb points 
+        public static final int CLIMB_L3_POINTS = 30;  // Level 3 climb points 
         
         // Height restriction during climb (inches)
         public static final double MAX_HEIGHT_DURING_CLIMB = 30.0;
@@ -104,19 +104,26 @@ public final class Constants {
      * Shooter constants (placeholder)
      */
     public static final class ShooterConstants {
+        public static final int SHOOTER_MOTOR_ID = 1; 
         // Target RPM values (will vary based on distance)
-        public static final double SHOOTER_IDLE_RPM = 0;
+        public static final double SHOOTER_FIRING_RPM = 4500.0; 
+        public static final double SHOOTER_IDLE_RPM = 1000;
         public static final double SHOOTER_SPINUP_RPM = 3000;
         public static final double SHOOTER_MAX_RPM = 5000;
-        
+
         public static final double SHOOTER_IDLE_SPEED = 0;
         public static final double SHOOTER_SPINUP_SPEED = 0.6;
         public static final double SHOOTER_FIRING_SPEED = 0.8;
         
-
         // RPM tolerance for "at setpoint" check
         public static final double SHOOTER_RPM_TOLERANCE = 100;
-        
+
+        // KP values(note that these are not tuned values)
+        public static final double kP = 0.3;  
+        public static final double kI = 0.0;
+        public static final double kD = 0.0;
+        public static final double kV = 0.12;
+        public static final int CURRENT_LIMIT = 40;
         // Feeder speed when firing
         public static final double FEEDER_SPEED = 1.0;
     }
@@ -173,7 +180,7 @@ public final class Constants {
         public static final int PIPELINE_APRILTAG = 2;
         
         // Target height for hub (inches from floor)
-        public static final double HUB_TARGET_HEIGHT_INCHES = 104.0;  // Placeholder
+        public static final double HUB_TARGET_HEIGHT_INCHES = 72.0;  // From game manual
         
         // Camera mounting (inches)
         public static final double CAMERA_HEIGHT_INCHES = 24.0;  // Placeholder
@@ -280,3 +287,4 @@ public final class Constants {
         RIGHT
     }
 }
+
