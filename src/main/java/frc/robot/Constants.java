@@ -274,4 +274,19 @@ public final class Constants {
         CENTER,
         RIGHT
     }
+
+    public enum ClimbHeight {
+        LOW(27.0),
+        MIDDLE(45.0),
+        HIGH(63.0);
+
+        private final double height;
+        ClimbHeight(final double height) {
+            this.height = height;
+        }
+
+        public double getHeight() {
+            return height;
+        }
+    }
 }
