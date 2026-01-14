@@ -4,13 +4,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.ClimbSubsystem;
 
-import java.util.function.Supplier;
-
 public class ClimbCommand extends Command {
     private final ClimbSubsystem climbSubsystem;
-    private final Supplier<Constants.ClimbHeight> climbHeight;
+    private final Constants.ClimbHeight climbHeight;
 
-    public ClimbCommand(ClimbSubsystem climbSubsystem, Supplier<Constants.ClimbHeight> climbHeight) {
+    public ClimbCommand(ClimbSubsystem climbSubsystem, Constants.ClimbHeight climbHeight) {
         this.climbSubsystem = climbSubsystem;
         this.climbHeight = climbHeight;
         addRequirements(climbSubsystem);
@@ -18,11 +16,11 @@ public class ClimbCommand extends Command {
 
     @Override
     public void initialize() {
-        climbSubsystem.climbToHeight(climbHeight.get().getHeight());
+        climbSubsystem.setClimbSetpoint(climbHeight.getHeight());
     }
 
     @Override
     public boolean isFinished() {
-        return climbSubsystem.isAtHeight();
+        return climbSubsystem.isAtSetpoint();
     }
 }

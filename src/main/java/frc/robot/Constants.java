@@ -276,9 +276,8 @@ public final class Constants {
     }
 
     public enum ClimbHeight {
-        LOW(27.0),
-        MIDDLE(45.0),
-        HIGH(63.0);
+        DOWN(0.0),
+        UP(45.0);
 
         private final double height;
         ClimbHeight(final double height) {
