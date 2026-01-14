@@ -77,6 +77,9 @@ public class RobotContainer {
         new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT)
     );
 
+    // Y button - Reset Heading
+    m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController.leftTrigger(0.5).whileTrue(

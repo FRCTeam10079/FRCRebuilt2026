@@ -55,7 +55,7 @@ public final class Constants {
         // ==================== SPEEDS ====================
         // These are the ABSOLUTE maximums - derived from TunerConstants.kSpeedAt12Volts
         // The robot physically cannot exceed these values
-        public static final double MAX_SPEED_MPS = 4.8768;  // The theoretical possible maximum translation speed is 10.81 m/s - from TunerConstants
+        public static final double MAX_SPEED_MPS = 10.0;  // The theoretical possible maximum translation speed is 10.81 m/s - from TunerConstants
         public static final double MAX_ANGULAR_RATE_RAD_PER_SEC = Math.PI * 2.0;  // 360 deg/s
         // ==================== SPEED COEFFICIENTS ====================
         // Runtime multipliers applied to MAX_SPEED - these can be changed dynamically
