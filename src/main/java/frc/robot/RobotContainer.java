@@ -10,7 +10,9 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
+import frc.robot.commands.RunClimber;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
 
@@ -23,7 +25,8 @@ public class RobotContainer {
   // Controllers
   private final CommandXboxController m_driverController = new CommandXboxController(0);
   private final CommandXboxController m_operatorController = new CommandXboxController(1);
-  
+  // Climb
+  private final ClimberSubsystem climber = new ClimberSubsystem();
   // State Machine
   private final RobotStateMachine m_stateMachine = RobotStateMachine.getInstance();
   
@@ -33,7 +36,7 @@ public class RobotContainer {
   
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
-  
+
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
@@ -41,6 +44,11 @@ public class RobotContainer {
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
     
+    // Control climber with operator's right joystick Y-axis
+      climber.setDefaultCommand(new RunClimber(
+      climber, 
+      () -> -m_operatorController.getLeftY() 
+    ));
     // Configure button bindings
     configureBindings();
   }

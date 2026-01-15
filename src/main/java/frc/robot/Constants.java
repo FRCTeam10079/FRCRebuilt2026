@@ -129,6 +129,15 @@ public final class Constants {
         // Climber motor speeds
         public static final double CLIMBER_EXTEND_SPEED = 0.7;
         public static final double CLIMBER_RETRACT_SPEED = -0.8;
+
+                public static final int CLIMBER_MOTOR_ID = 3; // Guessing ID
+        
+       
+        public static final int CURRENT_LIMIT = 60; 
+
+
+        public static final double EXTEND_SPEED = 0.5;
+        public static final double CLIMB_SPEED = -0.8; 
     }
     
     /**
