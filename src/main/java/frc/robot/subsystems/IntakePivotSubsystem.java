@@ -63,11 +63,9 @@ public class IntakePivotSubsystem extends SubsystemBase {
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         // Limits to prevent over-rotation
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold =
-                Constants.IntakeConstants.PIVOT_STOWED_POSITION; // Slightly past intake position
+        config.SoftwareLimitSwitch.withForwardSoftLimitThreshold(Constants.IntakeConstants.PIVOT_STOWED_POSITION);
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-        config.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
-                Constants.IntakeConstants.PIVOT_INTAKE_POSITION; // Slightly past stowed
+        config.SoftwareLimitSwitch.withReverseSoftLimitThreshold(Constants.IntakeConstants.PIVOT_INTAKE_POSITION);
         config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
 
         motor.getConfigurator().apply(config);

@@ -4,6 +4,10 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Rotations;
+
+import edu.wpi.first.units.measure.Angle;
+
 /** Constants for FRC 2026 REBUILT season Contains game-specific values, timing, and robot configuration */
 public final class Constants {
 
@@ -91,8 +95,8 @@ public final class Constants {
         public static final int INTAKE_MOTOR_ID = 0; // TODO: Make real
         public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
         public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
-        public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
-        public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
+        public static final Angle PIVOT_INTAKE_POSITION = Rotations.of(0.0); // TODO: Tune
+        public static final Angle PIVOT_STOWED_POSITION = Rotations.of(0.5); // TODO: Tune
     }
 
     /** Shooter constants (placeholder) */

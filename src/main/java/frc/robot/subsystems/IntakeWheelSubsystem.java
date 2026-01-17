@@ -15,10 +15,6 @@ public class IntakeWheelSubsystem extends SubsystemBase {
         intakeMotor.set(speed);
     }
 
-    public void stopIntake() {
-        intakeMotor.stopMotor();
-    }
-
     public void stop() {
         intakeMotor.stopMotor();
     }
