@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.intake;
 
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -7,16 +7,11 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
 import frc.robot.commands.IntakeCommand;
 
-public class IntakeSubsystem extends SubsystemBase {
-
+public class IntakeWheelSubsystem extends SubsystemBase {
     private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID);
 
     public void setIntakePower(double speed) {
         intakeMotor.set(speed);
-    }
-
-    public void stopIntake() {
-        intakeMotor.stopMotor();
     }
 
     public void stop() {
