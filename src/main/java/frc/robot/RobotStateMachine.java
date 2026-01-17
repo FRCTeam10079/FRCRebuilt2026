@@ -448,7 +448,7 @@ public class RobotStateMachine extends SubsystemBase {
                 setDrivetrainMode(DrivetrainMode.DISABLED);
                 break;
 
-                // Climbing states lock wheels for safety
+            // Climbing states lock wheels for safety
             case CLIMBING_L1:
             case CLIMBING_L2:
             case CLIMBING_L3:
@@ -458,13 +458,13 @@ public class RobotStateMachine extends SubsystemBase {
                 setDrivetrainMode(DrivetrainMode.LOCKED);
                 break;
 
-                // Defense mode
+            // Defense mode
             case DEFENSE_BLOCKING:
             case HIDING:
                 setDrivetrainMode(DrivetrainMode.DEFENSE_MODE);
                 break;
 
-                // Aiming states use vision tracking
+            // Aiming states use vision tracking
             case AIMING_AT_HUB:
             case ALIGNING_TO_HUB:
                 setDrivetrainMode(DrivetrainMode.VISION_TRACKING);
