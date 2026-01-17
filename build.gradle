@@ -6,7 +6,11 @@ plugins {
 
 spotless {
     java {
-        palantirJavaFormat('2.39.0').formatJavadoc(true)
+        palantirJavaFormat().formatJavadoc(true)
+    }
+    groovy {
+        target "**/*.gradle"
+        greclipse().configProperties("org.eclipse.jdt.core.formatter.tabulation.char=space")
     }
     json {
         target "**/*.json"
@@ -49,7 +53,7 @@ deploy {
                     files = project.fileTree('src/main/deploy')
                     directory = '/home/lvuser/deploy'
                     deleteOldFiles = false // Change to true to delete files on roboRIO that no
-                                           // longer exist in deploy directory of this project
+                    // longer exist in deploy directory of this project
                 }
             }
         }
@@ -98,11 +102,21 @@ test {
 wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
 
+tasks.register("commit-hooks", Copy) {
+    from("$rootDir/config/hooks/")
+    into("$rootDir/.git/hooks/")
+}
+
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
-    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    dependsOn(tasks.named("commit-hooks"))
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
     from sourceSets.main.allSource
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
