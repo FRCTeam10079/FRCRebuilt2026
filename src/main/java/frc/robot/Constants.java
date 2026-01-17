@@ -4,12 +4,18 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.*;
 
+import edu.wpi.first.units.AngularAccelerationUnit;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularAcceleration;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Velocity;
 
 /** Constants for FRC 2026 REBUILT season Contains game-specific values, timing, and robot configuration */
 public final class Constants {
+    /** Common polling rate for encoders. */
+    public static double ENCODER_POLLING_RATE = 100;
 
     /** Game timing constants for REBUILT */
     public static final class GameConstants {
@@ -93,10 +99,25 @@ public final class Constants {
         public static final double INTAKE_SPEED = 0.8;
         public static final double OUTTAKE_SPEED = -0.5;
         public static final int INTAKE_MOTOR_ID = 0; // TODO: Make real
+
         public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
         public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
         public static final Angle PIVOT_INTAKE_POSITION = Rotations.of(0.0); // TODO: Tune
         public static final Angle PIVOT_STOWED_POSITION = Rotations.of(0.5); // TODO: Tune
+
+        public static final double PIVOT_KS = 0.0;
+        public static final double PIVOT_KV = 0.0;
+        public static final double PIVOT_KG = 0.0;
+        public static final double PIVOT_KA = 0.0;
+        public static final double PIVOT_KP = 0.02;
+        public static final double PIVOT_KI = 0.0;
+        public static final double PIVOT_KD = 0.5;
+
+        public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
+        public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
+        public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
+                RotationsPerSecondPerSecond.per(Second).of(0);
+        public static final double PIVOT_CURRENT_LIMIT = 40.0;
     }
 
     /** Shooter constants (placeholder) */
