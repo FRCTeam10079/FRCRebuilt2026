@@ -99,15 +99,32 @@ public final class Constants {
     public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
   }
 
-  /** Shooter constants (placeholder) */
+  /**
+   * Shooter constants
+   *
+   * <p>Hardware: 2x Kraken X60 (TalonFX) on CANivore bus Configuration: Counter-rotating flywheels
+   * (slave inverted)
+   */
   public static final class ShooterConstants {
-    // Target RPM values (will vary based on distance)
+    // CAN IDs for shooter motors
+    public static final int MASTER_MOTOR_ID = 20; // TODO: Set actual CAN ID
+    public static final int SLAVE_MOTOR_ID = 21; // TODO: Set actual CAN ID
+
+    // Target RPM values
     public static final double SHOOTER_IDLE_RPM = 0;
-    public static final double SHOOTER_SPINUP_RPM = 3000;
-    public static final double SHOOTER_MAX_RPM = 5000;
+    public static final double SHOOTER_SPINUP_RPM = 3000; // Default spin-up target
+    public static final double SHOOTER_MAX_RPM = 5500; // Kraken X60 free speed ~6000 RPM
 
     // RPM tolerance for "at setpoint" check
-    public static final double SHOOTER_RPM_TOLERANCE = 100;
+    // 1678 used 500 RPM - starting with 150 cuz Krakens are more consistent at that speed
+    public static final double SHOOTER_RPM_TOLERANCE = 150;
+
+    // Velocity PID gains
+    // Units: kS in Volts, kV in Volts per RPS, kP in Volts per RPS error
+    // These values need to be tuned!
+    public static final double SHOOTER_KS = 0.15; // Static friction compensation
+    public static final double SHOOTER_KV = 0.12; // Velocity feedforward (main term)
+    public static final double SHOOTER_KP = 0.3; // Proportional gain for error correction
 
     // Feeder speed when firing
     public static final double FEEDER_SPEED = 1.0;
@@ -124,6 +141,28 @@ public final class Constants {
     // Climber motor speeds
     public static final double CLIMBER_EXTEND_SPEED = 0.7;
     public static final double CLIMBER_RETRACT_SPEED = -0.8;
+  }
+
+  /**
+   * Heading Controller constants
+   *
+   * <p>These control the swerve heading lock behavior. SNAP mode: Higher gains for quickly rotating
+   * to a target MAINTAIN mode: Lower gains for holding position with minimal oscillation
+   */
+  public static final class HeadingControllerConstants {
+    // SNAP mode gains - aggressive to quickly reach target heading
+    // Output is normalized (-1 to 1), so these are effectively output per degree of error
+    public static final double SNAP_KP = 0.02; // 254 used 0.05 (degrees output per degree error)
+    public static final double SNAP_KI = 0.0;
+    public static final double SNAP_KD = 0.001;
+
+    // MAINTAIN mode gains - gentle to hold position without oscillation
+    public static final double MAINTAIN_KP = 0.01; // 254 used 0.01
+    public static final double MAINTAIN_KI = 0.0;
+    public static final double MAINTAIN_KD = 0.0005;
+
+    // Heading tolerance for "at goal" detection (degrees)
+    public static final double HEADING_TOLERANCE_DEGREES = 2.0;
   }
 
   /** State machine timing constants */
