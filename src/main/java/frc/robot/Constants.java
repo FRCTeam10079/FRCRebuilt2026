@@ -106,16 +106,31 @@ public final class Constants {
     }
 
     /**
-     * Shooter constants (placeholder)
+     * Shooter constants
+     * 
+     * Hardware: 2x Kraken X60 (TalonFX) on CANivore bus
+     * Configuration: Counter-rotating flywheels (slave inverted)
      */
     public static final class ShooterConstants {
-        // Target RPM values (will vary based on distance)
+        // CAN IDs for shooter motors
+        public static final int MASTER_MOTOR_ID = 20;  // TODO: Set actual CAN ID
+        public static final int SLAVE_MOTOR_ID = 21;   // TODO: Set actual CAN ID
+
+        // Target RPM values
         public static final double SHOOTER_IDLE_RPM = 0;
-        public static final double SHOOTER_SPINUP_RPM = 3000;
-        public static final double SHOOTER_MAX_RPM = 5000;
+        public static final double SHOOTER_SPINUP_RPM = 3000;  // Default spin-up target
+        public static final double SHOOTER_MAX_RPM = 5500;     // Kraken X60 free speed ~6000 RPM
 
         // RPM tolerance for "at setpoint" check
-        public static final double SHOOTER_RPM_TOLERANCE = 100;
+        // 1678 used 500 RPM - starting with 150 cuz Krakens are more consistent at that speed
+        public static final double SHOOTER_RPM_TOLERANCE = 150;
+
+        // Velocity PID gains
+        // Units: kS in Volts, kV in Volts per RPS, kP in Volts per RPS error
+        // These values need to be tuned!
+        public static final double SHOOTER_KS = 0.15;  // Static friction compensation
+        public static final double SHOOTER_KV = 0.12;  // Velocity feedforward (main term)
+        public static final double SHOOTER_KP = 0.3;   // Proportional gain for error correction
 
         // Feeder speed when firing
         public static final double FEEDER_SPEED = 1.0;
@@ -134,6 +149,29 @@ public final class Constants {
         // Climber motor speeds
         public static final double CLIMBER_EXTEND_SPEED = 0.7;
         public static final double CLIMBER_RETRACT_SPEED = -0.8;
+    }
+
+    /**
+     * Heading Controller constants
+     * 
+     * These control the swerve heading lock behavior.
+     * SNAP mode: Higher gains for quickly rotating to a target
+     * MAINTAIN mode: Lower gains for holding position with minimal oscillation
+     */
+    public static final class HeadingControllerConstants {
+        // SNAP mode gains - aggressive to quickly reach target heading
+        // Output is normalized (-1 to 1), so these are effectively output per degree of error
+        public static final double SNAP_KP = 0.02;    // 254 used 0.05 (degrees output per degree error)
+        public static final double SNAP_KI = 0.0;
+        public static final double SNAP_KD = 0.001;
+
+        // MAINTAIN mode gains - gentle to hold position without oscillation
+        public static final double MAINTAIN_KP = 0.01;  // 254 used 0.01
+        public static final double MAINTAIN_KI = 0.0;
+        public static final double MAINTAIN_KD = 0.0005;
+
+        // Heading tolerance for "at goal" detection (degrees)
+        public static final double HEADING_TOLERANCE_DEGREES = 2.0;
     }
 
     /**
@@ -220,9 +258,6 @@ public final class Constants {
     /**
      * AprilTag positions on the field
      *
-     * NOTE: This is a PLACEHOLDER using 2025 Reefscape field layout!
-     * Replace with actual 2026 REBUILT field AprilTag positions when released.
-     *
      * Format: HashMap<TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}>
      */
     public static final class AprilTagMaps {
@@ -231,35 +266,48 @@ public final class Constants {
         static {
             // Points are in inches, Angles are in degrees
             // Format: {X, Y, Z, Yaw, Pitch}
+            aprilTagMap.put(1, new double[]{142.04, 133.48, 34.99, 180.0, 0.0});
+            aprilTagMap.put(2, new double[]{143.51, 23.76, 44.27, 90.0, 0.0});
+            aprilTagMap.put(3, new double[]{119.74, 14.01, 44.27, 180.0, 0.0});
+            aprilTagMap.put(4, new double[]{119.74, 0.01, 44.27, 180.0, 0.0});
+            aprilTagMap.put(5, new double[]{143.51, -23.75, 44.27, 270.0, 0.0});
+            aprilTagMap.put(6, new double[]{142.04, -133.45, 34.99, 180.0, 0.0});
+            aprilTagMap.put(7, new double[]{144.97, -133.45, 34.99, 0.0, 0.0});
+            aprilTagMap.put(8, new double[]{157.50, -23.75, 44.27, 270.0, 0.0});
+            aprilTagMap.put(9, new double[]{167.27, -13.99, 44.27, 0.0, 0.0});
+            aprilTagMap.put(10, new double[]{167.27, 0.01, 44.27, 0.0, 0.0});
+            aprilTagMap.put(11, new double[]{157.50, 23.76, 44.27, 90.0, 0.0});
+            aprilTagMap.put(12, new double[]{144.97, 133.47, 34.99, 0.0, 0.0});
+            aprilTagMap.put(13, new double[]{325.31, 132.63, 21.74, 180.0, 0.0});
+            aprilTagMap.put(14, new double[]{325.31, 115.62, 21.74, 180.0, 0.0});
+            aprilTagMap.put(15, new double[]{325.30, 11.38, 21.74, 180.0, 0.0});
+            aprilTagMap.put(16, new double[]{325.30, -5.62, 21.74, 180.0, 0.0});
 
-            // RED SIDE
-            aprilTagMap.put(3, new double[]{455.15, 317.15, 51.25, 270.0, 0.0});
-            aprilTagMap.put(4, new double[]{365.20, 241.64, 73.54, 0.0, 30.0});
-            aprilTagMap.put(5, new double[]{365.20, 75.39, 73.54, 0.0, 30.0});
-            aprilTagMap.put(6, new double[]{530.49, 130.17, 12.13, 300.0, 0.0});
-            aprilTagMap.put(7, new double[]{546.87, 158.50, 12.13, 0.0, 0.0});
-            aprilTagMap.put(8, new double[]{530.49, 186.83, 12.13, 60.0, 0.0});
-            aprilTagMap.put(9, new double[]{497.77, 186.83, 12.13, 120.0, 0.0});
-            aprilTagMap.put(10, new double[]{481.39, 158.50, 12.13, 180.0, 0.0});
-            aprilTagMap.put(11, new double[]{497.77, 130.17, 12.13, 240.0, 0.0});
-
-            // BLUE SIDE
-            aprilTagMap.put(14, new double[]{325.68, 241.64, 73.54, 180.0, 30.0});
-            aprilTagMap.put(15, new double[]{325.68, 75.39, 73.54, 180.0, 30.0});
-            aprilTagMap.put(16, new double[]{235.73, -0.15, 51.25, 90.0, 0.0});
-            aprilTagMap.put(17, new double[]{160.39, 130.17, 12.13, 240.0, 0.0});
-            aprilTagMap.put(18, new double[]{144.00, 158.50, 12.13, 180.0, 0.0});
-            aprilTagMap.put(19, new double[]{160.39, 186.83, 12.13, 120.0, 0.0});
-            aprilTagMap.put(20, new double[]{193.10, 186.83, 12.13, 60.0, 0.0});
-            aprilTagMap.put(21, new double[]{209.49, 158.50, 12.13, 0.0, 0.0});
-            aprilTagMap.put(22, new double[]{193.10, 130.17, 12.13, 300.0, 0.0});
+            aprilTagMap.put(17, new double[]{-142.04, -133.45, 34.99, 0.0, 0.0});
+            aprilTagMap.put(18, new double[]{-143.50, -23.75, 44.27, 270.0, 0.0});
+            aprilTagMap.put(19, new double[]{-119.74, -13.99, 44.27, 0.0, 0.0});
+            aprilTagMap.put(20, new double[]{-119.74, 0.01, 44.27, 0.0, 0.0});
+            aprilTagMap.put(21, new double[]{-143.50, 23.76, 44.27, 90.0, 0.0});
+            aprilTagMap.put(22, new double[]{-142.04, 133.47, 34.99, 0.0, 0.0});
+            aprilTagMap.put(23, new double[]{-144.97, 133.47, 34.99, 180.0, 0.0});
+            aprilTagMap.put(24, new double[]{-157.50, 23.76, 44.27, 90.0, 0.0});
+            aprilTagMap.put(25, new double[]{-167.27, 14.01, 44.27, 180.0, 0.0});
+            aprilTagMap.put(26, new double[]{-167.27, 0.01, 44.27, 180.0, 0.0});
+            aprilTagMap.put(27, new double[]{-157.50, -23.75, 44.27, 270.0, 0.0});
+            aprilTagMap.put(28, new double[]{-144.97, -133.45, 34.99, 180.0, 0.0});
+            aprilTagMap.put(29, new double[]{-325.32, -132.65, 21.74, 0.0, 0.0});
+            aprilTagMap.put(30, new double[]{-325.32, -115.61, 21.74, 0.0, 0.0});
+            aprilTagMap.put(31, new double[]{-325.30, -11.36, 21.74, 0.0, 0.0});
+            aprilTagMap.put(32, new double[]{-325.30, 5.63, 21.74, 0.0, 0.0});
         }
 
         // Red side tag IDs (for direction flipping logic)
-        public static final int[] RED_SIDE_TAGS = {3, 4, 5, 6, 7, 8, 9, 10, 11};
+        // Left half of the field uses tags 1...16
+        public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
         // Blue side tag IDs
-        public static final int[] BLUE_SIDE_TAGS = {14, 15, 16, 17, 18, 19, 20, 21, 22};
+        // Right half of the field uses tags 17...32
+        public static final int[] BLUE_SIDE_TAGS = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
     }
 
     /**
