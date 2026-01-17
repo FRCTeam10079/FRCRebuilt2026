@@ -4,6 +4,9 @@
 
 package frc.robot;
 
+import static frc.robot.Constants.*;
+
+import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -59,8 +62,8 @@ public class RobotContainer {
                 () -> m_driverController.getLeftY(), // Forward/backward
                 () -> m_driverController.getLeftX(), // Left/right strafe
                 () -> m_driverController.getRightX(), // Rotation
-                Constants.DrivetrainConstants.MAX_SPEED_MPS,
-                Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+                DrivetrainConstants.MAX_SPEED_MPS,
+                DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
 
         // ==================== VISION ALIGNMENT ====================
         // A button - Align to AprilTag (CENTER position)
@@ -81,16 +84,12 @@ public class RobotContainer {
                 .leftTrigger(0.5)
                 .whileTrue(Commands.startEnd(
                         () -> {
-                            drivetrain.setTeleopVelocityCoefficient(
-                                    Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
-                            drivetrain.setRotationVelocityCoefficient(
-                                    Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+                            drivetrain.setTeleopVelocityCoefficient(DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+                            drivetrain.setRotationVelocityCoefficient(DrivetrainConstants.SLOW_MODE_COEFFICIENT);
                         },
                         () -> {
-                            drivetrain.setTeleopVelocityCoefficient(
-                                    Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
-                            drivetrain.setRotationVelocityCoefficient(
-                                    Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+                            drivetrain.setTeleopVelocityCoefficient(DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+                            drivetrain.setRotationVelocityCoefficient(DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
                         }));
 
         // ==================== OPERATOR CONTROLS ====================
@@ -108,6 +107,23 @@ public class RobotContainer {
         // Example: Hub shift state can be set based on FMS data or operator input
         // m_operatorController.start().onTrue(Commands.runOnce(() ->
         //     m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
+
+        // m_driverController.x().onTrue(startIntaking()).onFalse(stopIntaking());
+        var motor1 = new TalonFX(18);
+        var motor2 = new TalonFX(0);
+        var motor3 = new TalonFX(0);
+        getDriverController()
+                .a()
+                .onTrue(Commands.runOnce(() -> motor1.set(1.0)))
+                .onFalse(Commands.runOnce(() -> motor1.set(0.0)));
+        getDriverController()
+                .b()
+                .onTrue(Commands.runOnce(() -> motor2.set(1.0)))
+                .onFalse(Commands.runOnce(() -> motor2.set(0.0)));
+        getDriverController()
+                .x()
+                .onTrue(Commands.runOnce(() -> motor3.set(1.0)))
+                .onFalse(Commands.runOnce(() -> motor3.set(0.0)));
     }
 
     /** Get the driver controller for use in commands/subsystems */
