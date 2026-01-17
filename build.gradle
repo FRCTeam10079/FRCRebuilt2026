@@ -16,6 +16,10 @@ spotless {
         target "**/*.md"
         flexmark()
     }
+    groovy {
+        target "**/*.build"
+        greclipse()
+    }
 }
 
 java {
@@ -98,10 +102,16 @@ test {
 wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
 
+tasks.register("commit-hooks", Copy) {
+    from("$rootDir/config/hooks/")
+    into("$rootDir/.git/hooks/")
+}
+
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
+    dependsOn(tasks.named("commit-hooks"))
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     from sourceSets.main.allSource
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
