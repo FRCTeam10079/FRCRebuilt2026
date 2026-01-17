@@ -6,7 +6,11 @@ plugins {
 
 spotless {
     java {
-        palantirJavaFormat('2.39.0').formatJavadoc(true)
+        palantirJavaFormat().formatJavadoc(true)
+    }
+    groovy {
+        target "**/*.gradle"
+        greclipse()
     }
     json {
         target "**/*.json"
@@ -15,10 +19,6 @@ spotless {
     flexmark {
         target "**/*.md"
         flexmark()
-    }
-    groovy {
-        target "**/*.build"
-        greclipse()
     }
 }
 
