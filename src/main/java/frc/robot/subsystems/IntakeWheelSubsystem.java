@@ -7,7 +7,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
 import frc.robot.commands.IntakeCommand;
 
-public class IntakeSubsystem extends SubsystemBase {
+public class IntakeWheelSubsystem extends SubsystemBase {
 
     private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID);
 

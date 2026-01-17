@@ -6,30 +6,27 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import java.util.function.Supplier;
 
-/**
- * TODO:
- *
- * <ul>
- *   <li>Add functions to move pivot
- *   <li>Add command factories
- * </ul>
- */
-public class PivotSubsystem extends SubsystemBase {
+public class IntakePivotSubsystem extends SubsystemBase {
     private final TalonFX motor = new TalonFX(Constants.IntakeConstants.PIVOT_MOTOR_ID);
     private final CANcoder encoder = new CANcoder(Constants.IntakeConstants.PIVOT_ENCODER_ID);
-    private final PositionVoltage pivotPositionControl = new PositionVoltage(0).withSlot(0);
+    private final Supplier<Angle> encoderAngle = encoder.getPosition().asSupplier();
     private final MotionMagicVoltage motionMagic = new MotionMagicVoltage(0).withSlot(0);
 
-    public PivotSubsystem() {
+    private Angle setpoint = Radians.of(0.0);
+
+    public IntakePivotSubsystem() {
         configureMotors();
     }
 
@@ -79,5 +76,32 @@ public class PivotSubsystem extends SubsystemBase {
         motor.getPosition().setUpdateFrequency(100);
         encoder.getPosition().setUpdateFrequency(100);
         motor.optimizeBusUtilization();
+    }
+
+    public boolean isAtSetpoint(Angle tolerance) {
+        return encoderAngle.get().isNear(setpoint, tolerance);
+    }
+
+    public boolean isAtSetpoint() {
+        return encoderAngle.get().isNear(setpoint, Degrees.of(10.0));
+    }
+
+    public void setPivotSetpoint(Angle setpoint) {
+        this.setpoint = setpoint;
+    }
+
+    /** Set the pivot setpoint then immediately continue. */
+    public Command setPivotCommand(Supplier<Angle> setpoint) {
+        return Commands.runOnce(() -> setPivotSetpoint(setpoint.get()), this);
+    }
+
+    /** Pivot to setpoint while waiting for the pivot to reach the setpoint. */
+    public Command pivotToCommand(Supplier<Angle> setpoint) {
+        return Commands.run(() -> setPivotSetpoint(setpoint.get()), this).onlyWhile(() -> !isAtSetpoint());
+    }
+
+    @Override
+    public void periodic() {
+        motor.setControl(motionMagic.withPosition(setpoint));
     }
 }
