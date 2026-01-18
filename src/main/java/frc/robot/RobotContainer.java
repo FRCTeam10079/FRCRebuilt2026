@@ -101,12 +101,7 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController.a().whileTrue(Commands.sequence(
-        intake.runIntakeCommand()
-    ));
-    m_driverController.b().whileTrue(Commands.sequence(
-        intake.runOuttakeCommand()
-    ));
+   m_driverController.x().whileTrue(new IntakeCommand(intake));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
