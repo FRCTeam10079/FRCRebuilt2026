@@ -147,11 +147,6 @@ public class RobotContainer {
    * TODO: Implement autonomous routines using PathPlanner
    */
   public Command getAutonomousCommand() {
-    @Override
-    public boolean isFinished() {
-        return true;
-    }
-
     return Commands.print("No autonomous command configured");
   }
 }
