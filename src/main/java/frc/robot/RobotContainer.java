@@ -7,7 +7,6 @@ package frc.robot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.generated.TunerConstants;
@@ -17,8 +16,8 @@ import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.subsystems.PivotSubsystem;
 
 /**
- * RobotContainer for FRC 2026 REBUILT season
- * This class is where the robot's subsystems, commands, and button bindings are defined.
+ * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands, and button bindings
+ * are defined.
  */
 public class RobotContainer {
 
