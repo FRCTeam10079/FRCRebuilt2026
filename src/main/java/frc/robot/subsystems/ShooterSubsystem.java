@@ -22,24 +22,29 @@ import frc.robot.Constants.ShooterConstants;
 /**
  * This subsystem contains:
  * - Debounced "isReady()" check to ensure flywheel stability before feeding
- * - Slave motor following the master in opposite direction for counter-rotation
+ * - Single motor configuration (dual motor support commented out for future use)
  * 
  * Some features I added:
  * 1. Use velocity control for consistent shot power regardless of battery voltage
  * 2. Implement a stability counter that requires the flywheel to be within tolerance
  *    for multiple consecutive cycles before reporting "ready"
  * 3. Coast mode when idle to prevent belt skipping during rapid starts
+ * 
+ * NOTE: Dual motor (master/slave counter-rotating) code is commented out.
+ *       Uncomment the slave motor sections if we switch to a 2-motor setup.
  */
 public class ShooterSubsystem extends SubsystemBase {
 
     private final TalonFX m_masterMotor;
-    private final TalonFX m_slaveMotor;
+    // DUAL MOTOR: Uncomment for 2-motor setup
+    // private final TalonFX m_slaveMotor;
 
     private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0)
             .withSlot(0)
             .withEnableFOC(true);
     private final NeutralOut m_neutralRequest = new NeutralOut();
-    private final Follower m_followerRequest;
+    // DUAL MOTOR: Uncomment for 2-motor setup
+    // private final Follower m_followerRequest;
 
     private double m_targetRPM = 0.0;
     private boolean m_isEnabled = false;
@@ -55,13 +60,15 @@ public class ShooterSubsystem extends SubsystemBase {
      */
     public ShooterSubsystem() {
         m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, "canivore");
-        m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID, "canivore");
+        // DUAL MOTOR: Uncomment for 2-motor setup
+        // m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID, "canivore");
 
         configureMotors();
 
+        // DUAL MOTOR: Uncomment for 2-motor setup
         // Set up follower - slave follows master in opposite direction
         // This creates the counter-rotating flywheel configuration
-        m_followerRequest = new Follower(ShooterConstants.MASTER_MOTOR_ID, true);
+        // m_followerRequest = new Follower(ShooterConstants.MASTER_MOTOR_ID, true);
     }
 
     /**
@@ -97,18 +104,19 @@ public class ShooterSubsystem extends SubsystemBase {
         // Apply configuration
         m_masterMotor.getConfigurator().apply(masterConfig);
 
+        // DUAL MOTOR: Uncomment for 2-motor setup
         // ==================== SLAVE CONFIGURATION ====================
-        TalonFXConfiguration slaveConfig = new TalonFXConfiguration();
-        slaveConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        
-        // Current limits for slave (same as master)
-        slaveConfig.CurrentLimits = new CurrentLimitsConfigs()
-                .withSupplyCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(40)
-                .withStatorCurrentLimitEnable(true)
-                .withStatorCurrentLimit(80);
-
-        m_slaveMotor.getConfigurator().apply(slaveConfig);
+        // TalonFXConfiguration slaveConfig = new TalonFXConfiguration();
+        // slaveConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        // 
+        // // Current limits for slave (same as master)
+        // slaveConfig.CurrentLimits = new CurrentLimitsConfigs()
+        //         .withSupplyCurrentLimitEnable(true)
+        //         .withSupplyCurrentLimit(40)
+        //         .withStatorCurrentLimitEnable(true)
+        //         .withStatorCurrentLimit(80);
+        //
+        // m_slaveMotor.getConfigurator().apply(slaveConfig);
     }
 
     @Override
@@ -137,11 +145,13 @@ public class ShooterSubsystem extends SubsystemBase {
             // Convert RPM to RPS for Phoenix 6
             double targetRPS = m_targetRPM / 60.0;
             m_masterMotor.setControl(m_velocityRequest.withVelocity(targetRPS));
-            m_slaveMotor.setControl(m_followerRequest);
+            // DUAL MOTOR: Uncomment for 2-motor setup
+            // m_slaveMotor.setControl(m_followerRequest);
         } else {
             // Coast when disabled
             m_masterMotor.setControl(m_neutralRequest);
-            m_slaveMotor.setControl(m_neutralRequest);
+            // DUAL MOTOR: Uncomment for 2-motor setup
+            // m_slaveMotor.setControl(m_neutralRequest);
         }
 
         // Telemetry
