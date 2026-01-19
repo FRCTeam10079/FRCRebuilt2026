@@ -109,16 +109,16 @@ test {
 wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
 
-tasks.register("commit-hooks", Copy) {
-  from("$rootDir/config/hooks/")
-  into("$rootDir/.git/hooks/")
+tasks.register("git-hooks", Copy) {
+  from("$rootDir/git-hooks")
+  into("$rootDir/.git/hooks")
 }
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
-  dependsOn(tasks.named("commit-hooks"))
+  dependsOn(tasks.named("git-hooks"))
   from {
     configurations.runtimeClasspath.collect {
       it.isDirectory() ? it : zipTree(it)
