@@ -11,9 +11,7 @@ import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
-import frc.robot.subsystems.PivotSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
@@ -34,9 +32,6 @@ public class RobotContainer {
 
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
-
-  public final IntakeSubsystem intake = new IntakeSubsystem();
-  public final PivotSubsystem pivot = new PivotSubsystem();
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
@@ -101,8 +96,6 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController.a().whileTrue(Commands.sequence(intake.runIntakeCommand()));
-    m_driverController.b().whileTrue(Commands.sequence(intake.runOuttakeCommand()));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
