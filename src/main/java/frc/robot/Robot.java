@@ -9,14 +9,14 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 /**
- * Robot class for FRC 2026 REBUILT season
- * Integrates with the Master State Machine for comprehensive robot control
+ * Robot class for FRC 2026 REBUILT season Integrates with the Master State Machine for
+ * comprehensive robot control
  */
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   private final RobotContainer m_robotContainer;
-  
+
   // MASTER STATE MACHINE - Controls EVERYTHING
   private final RobotStateMachine m_stateMachine;
 
@@ -29,7 +29,7 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     // Update master state machine
     m_stateMachine.periodic();
-    
+
     // Run command scheduler
     CommandScheduler.getInstance().run();
   }
@@ -55,7 +55,7 @@ public class Robot extends TimedRobot {
   public void autonomousInit() {
     // State machine transition: Autonomous starting
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.AUTO_INIT);
-    
+
     // Get and schedule autonomous command
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -81,12 +81,12 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     // State machine transition: Teleop starting
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.TELEOP_INIT);
-    
+
     // Cancel autonomous command
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
-    
+
     // Transition to running state
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.TELEOP_RUNNING);
   }
@@ -106,9 +106,9 @@ public class Robot extends TimedRobot {
   public void testInit() {
     // State machine transition: Test mode starting
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.TEST_INIT);
-    
+
     CommandScheduler.getInstance().cancelAll();
-    
+
     // Transition to running state
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.TEST_RUNNING);
   }
