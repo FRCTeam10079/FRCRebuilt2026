@@ -6,7 +6,7 @@ plugins {
 
 spotless {
   java {
-    importOrder("\\#", "java|javax", "", "edu.wpi.first", "frc.robot")
+    importOrder("\\#", "java|javax", "com|org", "edu.wpi.first", "frc.robot")
     removeUnusedImports()
     cleanthat()
     palantirJavaFormat().style("GOOGLE").formatJavadoc(true)
