@@ -83,11 +83,17 @@ public class ShooterSubsystem extends SubsystemBase {
         masterConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;  // Coast when neutral
 
         // Current limits
+        // Stator current = torque output. Low stator limits = slow acceleration.
+        // Phoenix 6 docs says 80A stator limit cuts acceleration by 56%! :O
+        // We use a high stator on the flywheels (120A+) since no risk of wheel slip.
+        // Supply current = battery draw. We need to limit this to prevent brownouts.
         masterConfig.CurrentLimits = new CurrentLimitsConfigs()
                 .withSupplyCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(40)     // Continuous limit
+                .withSupplyCurrentLimit(70)                 // Continuous supply limit (battery)
+                .withSupplyCurrentLowerLimit(40)            // Reduced limit after sustained draw
+                .withSupplyCurrentLowerTime(1.0)            // Time at limit before reducing
                 .withStatorCurrentLimitEnable(true)
-                .withStatorCurrentLimit(80);    // Peak limit
+                .withStatorCurrentLimit(120);               // High stator = max torque/accel!
 
         // Velocity PID gains (Slot 0)
         // THESE VALUES NEED TO BE TUNED FOR THE ROBOT
@@ -161,7 +167,10 @@ public class ShooterSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Shooter/IsEnabled", m_isEnabled);
         SmartDashboard.putBoolean("Shooter/IsReady", isReady());
         SmartDashboard.putNumber("Shooter/StabilityCounter", m_stabilityCounter);
-        SmartDashboard.putNumber("Shooter/MasterCurrent", m_masterMotor.getSupplyCurrent().getValueAsDouble());
+        // Current monitoring - When testing, make sure to watch these to verify limits aren't clamping output
+        SmartDashboard.putNumber("Shooter/SupplyCurrent", m_masterMotor.getSupplyCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/StatorCurrent", m_masterMotor.getStatorCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Shooter/MotorVoltage", m_masterMotor.getMotorVoltage().getValueAsDouble());
     }
 
     /**
