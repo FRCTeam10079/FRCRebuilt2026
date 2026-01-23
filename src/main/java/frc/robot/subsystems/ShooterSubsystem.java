@@ -79,7 +79,7 @@ public class ShooterSubsystem extends SubsystemBase {
         TalonFXConfiguration masterConfig = new TalonFXConfiguration();
 
         // Motor direction - NEEDS TO BE ADJUSTED BASED ON WHAT MECH PUTS
-        masterConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+        masterConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
         masterConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;  // Coast when neutral
 
         // Current limits
