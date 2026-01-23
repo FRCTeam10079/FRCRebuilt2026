@@ -8,13 +8,13 @@ import frc.robot.Constants.IntakeConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID); // replace with real CAN ID
+  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID); 
 
   public IntakeSubsystem() {
   }
 
   public void intakeIn() {
-    intakeMotor.set(INTAKE_SPEED);
+    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
   }
 
 
