@@ -5,25 +5,25 @@ import frc.robot.subsystems.IntakeSubsystem;
 
 public class IntakeCommand extends Command {
 
-  private final IntakeSubsystem intake;
+    private final IntakeSubsystem intake;
 
-  public IntakeCommand(IntakeSubsystem intake) {
-    this.intake = intake;
-    addRequirements(intake);
-  }
+    public IntakeCommand(IntakeSubsystem intake) {
+        this.intake = intake;
+        addRequirements(intake);
+    }
 
-  @Override
-  public void initialize() {
-    intake.intakeIn();
-  }
+    @Override
+    public void initialize() {
+        intake.intakeIn();
+    }
 
-  @Override
-  public void end(boolean interrupted) {
-    intake.stop();
-  }
+    @Override
+    public void end(boolean interrupted) {
+        intake.stop();
+    }
 
-  @Override
-  public boolean isFinished() {
-    return false;
-  }
+    @Override
+    public boolean isFinished() {
+        return false;
+    }
 }
