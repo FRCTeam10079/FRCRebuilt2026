@@ -164,7 +164,17 @@ public final class Constants {
     public static final double CAMERA_HEIGHT_INCHES = 24.0; // Placeholder
     public static final double CAMERA_MOUNT_ANGLE_DEGREES = 30.0; // Placeholder
   }
-
+  public static final class IndexerConstants {
+    // CHANGE ID to what tuner x says
+    public static final int kIndexerMotorID = 15; 
+    
+    // Safety Limits
+    public static final int kCurrentLimit = 40; 
+    
+    // Speeds (-1.0 to 1.0)
+    public static final double kForwardSpeed = 0.5;
+    public static final double kReverseSpeed = -0.5;
+}
   // ==================== UTILITY METHODS ====================
 
   /** Inches to Meters conversion factor */

@@ -12,7 +12,9 @@ import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.commands.RunIndexer;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season
@@ -33,7 +35,8 @@ public class RobotContainer {
   
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
-  
+  // Indexer
+  private final IndexerSubsystem indexer = new IndexerSubsystem();
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
@@ -79,7 +82,18 @@ public class RobotContainer {
 
     // Y button - Reset Heading
     m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+    
+    // Right Trigger - Run Indexer Forward (Intake/Feed)
+    
+    m_driverController.rightTrigger(0.5).whileTrue(
+        new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
+    );
 
+    // B Button - Run Indexer Reverse (Unjam)
+    
+    m_driverController.b().whileTrue(
+        new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
+    );
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController.leftTrigger(0.5).whileTrue(
@@ -93,6 +107,7 @@ public class RobotContainer {
                 drivetrain.setRotationVelocityCoefficient(Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
             }
         )
+      
     );
     
     // ==================== OPERATOR CONTROLS ====================
