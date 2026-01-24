@@ -14,7 +14,6 @@ import frc.robot.commands.AlignToAprilTag;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
-import frc.robot.subsystems.intake.IntakePivotSubsystem;
 import frc.robot.subsystems.intake.IntakeWheelSubsystem;
 
 /**
@@ -38,7 +37,7 @@ public class RobotContainer {
     public final LimelightSubsystem limelight = new LimelightSubsystem();
 
     public final IntakeWheelSubsystem intake = new IntakeWheelSubsystem();
-    public final IntakePivotSubsystem pivot = new IntakePivotSubsystem();
+    // public final IntakePivotSubsystem pivot = new IntakePivotSubsystem();
 
     public RobotContainer() {
         // Link limelight to drivetrain for vision-based odometry
@@ -93,8 +92,8 @@ public class RobotContainer {
 
         // ==================== OPERATOR CONTROLS ====================
         // TODO: Add intake controls
-        m_driverController.a().whileTrue(Commands.sequence(intake.runIntakeCommand()));
-        m_driverController.b().whileTrue(Commands.sequence(intake.runOuttakeCommand()));
+        // m_driverController.a().whileTrue(Commands.sequence(intake.runIntakeCommand()));
+        // m_driverController.b().whileTrue(Commands.sequence(intake.runOuttakeCommand()));
         // TODO: Add shooter controls
         // TODO: Add climb controls
 
@@ -107,7 +106,9 @@ public class RobotContainer {
         // m_operatorController.start().onTrue(Commands.runOnce(() ->
         //     m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
 
-        m_driverController.x().onTrue(startIntaking()).onFalse(stopIntaking());
+        // m_driverController.x().onTrue(startIntaking()).onFalse(stopIntaking());
+        m_driverController.x().toggleOnTrue(intake.runIntakeCommand());
+        m_driverController.a().toggleOnTrue(intake.runOuttakeCommand());
     }
 
     /** Get the driver controller for use in commands/subsystems */
@@ -135,11 +136,11 @@ public class RobotContainer {
 
     public Command startIntaking() {
         return Commands.parallel(
-                intake.startIntakeCommand(), pivot.pivotToCommand(() -> IntakeConstants.PIVOT_INTAKE_POSITION));
+                intake.startIntakeCommand() /*pivot.pivotToCommand(() -> IntakeConstants.PIVOT_INTAKE_POSITION)*/);
     }
 
     public Command stopIntaking() {
         return Commands.parallel(
-                intake.stopCommand(), pivot.pivotToCommand(() -> IntakeConstants.PIVOT_STOWED_POSITION));
+                intake.stopCommand() /* pivot.pivotToCommand(() -> IntakeConstants.PIVOT_STOWED_POSITION)*/);
     }
 }
