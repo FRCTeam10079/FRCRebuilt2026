@@ -217,37 +217,47 @@ public final class Constants {
         new java.util.HashMap<>();
 
     static {
-      // Points are in inches, Angles are in degrees
+      // 2026 REBUILT Field - Welded Perimeter
       // Format: {X, Y, Z, Yaw, Pitch}
-
-      // RED SIDE
-      aprilTagMap.put(3, new double[] {455.15, 317.15, 51.25, 270.0, 0.0});
-      aprilTagMap.put(4, new double[] {365.20, 241.64, 73.54, 0.0, 30.0});
-      aprilTagMap.put(5, new double[] {365.20, 75.39, 73.54, 0.0, 30.0});
-      aprilTagMap.put(6, new double[] {530.49, 130.17, 12.13, 300.0, 0.0});
-      aprilTagMap.put(7, new double[] {546.87, 158.50, 12.13, 0.0, 0.0});
-      aprilTagMap.put(8, new double[] {530.49, 186.83, 12.13, 60.0, 0.0});
-      aprilTagMap.put(9, new double[] {497.77, 186.83, 12.13, 120.0, 0.0});
-      aprilTagMap.put(10, new double[] {481.39, 158.50, 12.13, 180.0, 0.0});
-      aprilTagMap.put(11, new double[] {497.77, 130.17, 12.13, 240.0, 0.0});
-
-      // BLUE SIDE
-      aprilTagMap.put(14, new double[] {325.68, 241.64, 73.54, 180.0, 30.0});
-      aprilTagMap.put(15, new double[] {325.68, 75.39, 73.54, 180.0, 30.0});
-      aprilTagMap.put(16, new double[] {235.73, -0.15, 51.25, 90.0, 0.0});
-      aprilTagMap.put(17, new double[] {160.39, 130.17, 12.13, 240.0, 0.0});
-      aprilTagMap.put(18, new double[] {144.00, 158.50, 12.13, 180.0, 0.0});
-      aprilTagMap.put(19, new double[] {160.39, 186.83, 12.13, 120.0, 0.0});
-      aprilTagMap.put(20, new double[] {193.10, 186.83, 12.13, 60.0, 0.0});
-      aprilTagMap.put(21, new double[] {209.49, 158.50, 12.13, 0.0, 0.0});
-      aprilTagMap.put(22, new double[] {193.10, 130.17, 12.13, 300.0, 0.0});
+      aprilTagMap.put(1, new double[] {467.64, 292.31, 35.00, 180.0, 0.0}); // Trench, Red
+      aprilTagMap.put(2, new double[] {469.11, 182.60, 44.25, 90.0, 0.0}); // Hub, Red
+      aprilTagMap.put(3, new double[] {445.35, 172.84, 44.25, 180.0, 0.0}); // Hub, Red
+      aprilTagMap.put(4, new double[] {445.35, 158.84, 44.25, 180.0, 0.0}); // Hub, Red
+      aprilTagMap.put(5, new double[] {469.11, 135.09, 44.25, 270.0, 0.0}); // Hub, Red
+      aprilTagMap.put(6, new double[] {467.64, 25.37, 35.00, 180.0, 0.0}); // Trench, Red
+      aprilTagMap.put(7, new double[] {470.59, 25.37, 35.00, 0.0, 0.0}); // Trench, Red
+      aprilTagMap.put(8, new double[] {483.11, 135.09, 44.25, 270.0, 0.0}); // Hub, Red
+      aprilTagMap.put(9, new double[] {492.88, 144.84, 44.25, 0.0, 0.0}); // Hub, Red
+      aprilTagMap.put(10, new double[] {492.88, 158.84, 44.25, 0.0, 0.0}); // Hub, Red
+      aprilTagMap.put(11, new double[] {483.11, 182.60, 44.25, 90.0, 0.0}); // Hub, Red
+      aprilTagMap.put(12, new double[] {470.59, 292.31, 35.00, 0.0, 0.0}); // Trench, Red
+      aprilTagMap.put(13, new double[] {650.92, 291.47, 21.75, 180.0, 0.0}); // Outpost, Red
+      aprilTagMap.put(14, new double[] {650.92, 274.47, 21.75, 180.0, 0.0}); // Outpost, Red
+      aprilTagMap.put(15, new double[] {650.90, 170.22, 21.75, 180.0, 0.0}); // Tower, Red
+      aprilTagMap.put(16, new double[] {650.90, 153.22, 21.75, 180.0, 0.0}); // Tower, Red
+      aprilTagMap.put(17, new double[] {183.59, 25.37, 35.00, 0.0, 0.0}); // Trench, Blue
+      aprilTagMap.put(18, new double[] {182.11, 135.09, 44.25, 270.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(19, new double[] {205.87, 144.84, 44.25, 0.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(20, new double[] {205.87, 158.84, 44.25, 0.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(21, new double[] {182.11, 182.60, 44.25, 90.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(22, new double[] {183.59, 292.31, 35.00, 0.0, 0.0}); // Trench, Blue
+      aprilTagMap.put(23, new double[] {180.64, 292.31, 35.00, 180.0, 0.0}); // Trench, Blue
+      aprilTagMap.put(24, new double[] {168.11, 182.60, 44.25, 90.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(25, new double[] {158.34, 172.84, 44.25, 180.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(26, new double[] {158.34, 158.84, 44.25, 180.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(27, new double[] {168.11, 135.09, 44.25, 270.0, 0.0}); // Hub, Blue
+      aprilTagMap.put(28, new double[] {180.64, 25.37, 35.00, 180.0, 0.0}); // Trench, Blue
+      aprilTagMap.put(29, new double[] {0.30, 26.22, 21.75, 0.0, 0.0}); // Outpost, Blue
+      aprilTagMap.put(30, new double[] {0.30, 43.22, 21.75, 0.0, 0.0}); // Outpost, Blue
+      aprilTagMap.put(31, new double[] {0.32, 147.47, 21.75, 0.0, 0.0}); // Tower, Blue
+      aprilTagMap.put(32, new double[] {0.32, 164.47, 21.75, 0.0, 0.0}); // Tower, Blue
     }
 
     // Red side tag IDs (for direction flipping logic)
-    public static final int[] RED_SIDE_TAGS = {3, 4, 5, 6, 7, 8, 9, 10, 11};
+    public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
     // Blue side tag IDs
-    public static final int[] BLUE_SIDE_TAGS = {14, 15, 16, 17, 18, 19, 20, 21, 22};
+    public static final int[] BLUE_SIDE_TAGS = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
   }
 
   /** Alignment position enum - left or right side offset from AprilTag */
