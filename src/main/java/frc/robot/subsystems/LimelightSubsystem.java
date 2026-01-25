@@ -209,4 +209,20 @@ public class LimelightSubsystem extends SubsystemBase {
   public void setLEDsBlink() {
     LimelightHelpers.setLEDMode_ForceBlink(VisionConstants.LIMELIGHT_NAME);
   }
+
+  /**
+   * Check if the robot is aligned to the target. Uses horizontal offset (tx) within tolerance.
+   *
+   * @return True if aligned within the yaw tolerance
+   */
+  public boolean isAligned() {
+    if (!hasTarget()) {
+      return false;
+    }
+    // Check if horizontal offset is within tolerance (in degrees)
+    double txDegrees = getTx();
+    double toleranceDegrees =
+        Math.toDegrees(frc.robot.Constants.DrivetrainConstants.YAW_TOLERANCE_RADIANS);
+    return Math.abs(txDegrees) < toleranceDegrees;
+  }
 }
