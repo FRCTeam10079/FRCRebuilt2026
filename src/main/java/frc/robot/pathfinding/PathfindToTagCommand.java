@@ -40,6 +40,9 @@ public class PathfindToTagCommand extends Command {
   private final Timer pathWaitTimer = new Timer();
   private boolean hasPath = false;
 
+  // Debug counter for periodic logging
+  private int debugCounter = 0;
+
   // Pure pursuit parameters
   private static final double LOOKAHEAD_DISTANCE = 0.5; // meters
   private static final double WAYPOINT_TOLERANCE = 0.3; // meters to advance waypoint
@@ -135,6 +138,10 @@ public class PathfindToTagCommand extends Command {
   public void execute() {
     Pose2d currentPose = drivetrain.getState().Pose;
 
+    // === PERIODIC DEBUG (every 50 loops ~ 1 second) ===
+    debugCounter++;
+    boolean shouldLogDebug = (debugCounter % 50 == 1);
+
     // Check for new path from background thread
     if (Pathfinding.isNewPathAvailable()) {
       currentPath = Pathfinding.getCurrentPathWaypoints();
@@ -144,6 +151,17 @@ public class PathfindToTagCommand extends Command {
       if (hasPath) {
         System.out.println(
             "[PathfindToTag] Received path with " + currentPath.size() + " waypoints");
+        // Log all waypoints when path is received
+        System.out.println("[PathfindToTag] === PATH WAYPOINTS ===");
+        for (int i = 0; i < currentPath.size(); i++) {
+          Translation2d wp = currentPath.get(i);
+          System.out.println("  [" + i + "]: (" + String.format("%.3f", wp.getX()) + ", "
+              + String.format("%.3f", wp.getY()) + ")");
+        }
+        System.out.println("==========================");
+      } else {
+        System.out.println(
+            "[PathfindToTag] WARNING: Received invalid path (null or < 2 waypoints)");
       }
     }
 
@@ -185,10 +203,64 @@ public class PathfindToTagCommand extends Command {
             currentPose.getRotation().getRadians(), targetPose.getRotation().getRadians()),
         constraints.maxAngularVelocityRadPerSec());
 
+    // === DEBUG: Log control outputs ===
+    if (shouldLogDebug) {
+      System.out.println("\n===== PATH FOLLOWING DEBUG =====");
+      System.out.println("[Follow] Current Pose: (" + String.format("%.3f", currentPose.getX())
+          + ", " + String.format("%.3f", currentPose.getY()) + ", "
+          + String.format("%.1f", currentPose.getRotation().getDegrees()) + "°)");
+      System.out.println(
+          "[Follow] Target Waypoint: (" + String.format("%.3f", targetWaypoint.getX()) + ", "
+              + String.format("%.3f", targetWaypoint.getY()) + ")");
+      System.out.println("[Follow] Goal Pose: (" + String.format("%.3f", targetPose.getX()) + ", "
+          + String.format("%.3f", targetPose.getY()) + ", "
+          + String.format("%.1f", targetPose.getRotation().getDegrees()) + "°)");
+      System.out.println("[Follow] Position Error: X="
+          + String.format("%.3f", targetWaypoint.getX() - currentPose.getX()) + ", Y="
+          + String.format("%.3f", targetWaypoint.getY() - currentPose.getY()));
+      System.out.println("[Follow] Velocity Commands (field-relative): vX="
+          + String.format("%.3f", xVelocity) + ", vY=" + String.format("%.3f", yVelocity)
+          + ", omega=" + String.format("%.3f", rotationVelocity));
+      System.out.println("[Follow] Waypoint Index: " + currentWaypointIndex + "/"
+          + (currentPath != null ? currentPath.size() : 0));
+      System.out.println("================================\n");
+    }
+
     // Apply to drivetrain as field-relative speeds
     ChassisSpeeds fieldSpeeds = new ChassisSpeeds(xVelocity, yVelocity, rotationVelocity);
     ChassisSpeeds robotSpeeds =
         ChassisSpeeds.fromFieldRelativeSpeeds(fieldSpeeds, currentPose.getRotation());
+
+    // === DEBUG: Log robot-relative speeds being sent ===
+    if (shouldLogDebug) {
+      System.out.println("[Follow] Robot-Relative Speeds: vX="
+          + String.format("%.3f", robotSpeeds.vxMetersPerSecond) + ", vY="
+          + String.format("%.3f", robotSpeeds.vyMetersPerSecond) + ", omega="
+          + String.format("%.3f", robotSpeeds.omegaRadiansPerSecond));
+    }
+
+    // === ADVANTAGEKIT LOGGING ===
+    Logger.recordOutput("Pathfinding/CurrentPose", currentPose);
+    Logger.recordOutput(
+        "Pathfinding/TargetWaypointPose", new Pose2d(targetWaypoint, targetPose.getRotation()));
+    Logger.recordOutput(
+        "Pathfinding/FieldVelocity", new double[] {xVelocity, yVelocity, rotationVelocity});
+    Logger.recordOutput("Pathfinding/RobotVelocity", new double[] {
+      robotSpeeds.vxMetersPerSecond,
+      robotSpeeds.vyMetersPerSecond,
+      robotSpeeds.omegaRadiansPerSecond
+    });
+    Logger.recordOutput("Pathfinding/PositionError", new double[] {
+      targetWaypoint.getX() - currentPose.getX(), targetWaypoint.getY() - currentPose.getY()
+    });
+    if (currentPath != null && !currentPath.isEmpty()) {
+      // Log the path as array of poses for visualization
+      Pose2d[] pathPoses = new Pose2d[currentPath.size()];
+      for (int i = 0; i < currentPath.size(); i++) {
+        pathPoses[i] = new Pose2d(currentPath.get(i), targetPose.getRotation());
+      }
+      Logger.recordOutput("Pathfinding/PathWaypoints", pathPoses);
+    }
 
     drivetrain.setControl(
         new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds().withSpeeds(robotSpeeds));

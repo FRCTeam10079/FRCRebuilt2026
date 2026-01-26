@@ -104,6 +104,29 @@ public final class PathfindingConstants {
         new Translation2d(SCORING_STANDOFF_METERS, 0).rotateBy(tagFacing);
     Translation2d scoringPosition = tagPosition.plus(standoffOffset);
 
+    // === DEBUG LOGGING ===
+    System.out.println("\n========== APRILTAG POSE CALCULATION DEBUG ==========");
+    System.out.println("[TagPose] Tag ID: " + tagId);
+    System.out.println("[TagPose] Raw Tag Data (inches): X=" + tagData[0] + ", Y=" + tagData[1]
+        + ", Yaw=" + tagYawDegrees + "°");
+    System.out.println("[TagPose] Tag Position (meters): X=" + String.format("%.3f", tagX) + ", Y="
+        + String.format("%.3f", tagY));
+    System.out.println(
+        "[TagPose] Tag Facing Direction: " + String.format("%.1f", tagFacing.getDegrees()) + "°");
+    System.out.println(
+        "[TagPose] Robot Should Face: " + String.format("%.1f", robotFacing.getDegrees()) + "°");
+    System.out.println("[TagPose] Standoff Distance: " + SCORING_STANDOFF_METERS + "m");
+    System.out.println(
+        "[TagPose] Standoff Offset Vector: X=" + String.format("%.3f", standoffOffset.getX())
+            + ", Y=" + String.format("%.3f", standoffOffset.getY()));
+    System.out.println(
+        "[TagPose] Final Scoring Position: X=" + String.format("%.3f", scoringPosition.getX())
+            + ", Y=" + String.format("%.3f", scoringPosition.getY()));
+    System.out.println("[TagPose] Final Pose: (" + String.format("%.3f", scoringPosition.getX())
+        + ", " + String.format("%.3f", scoringPosition.getY()) + ", "
+        + String.format("%.1f", robotFacing.getDegrees()) + "°)");
+    System.out.println("=====================================================\n");
+
     return new Pose2d(scoringPosition, robotFacing);
   }
 

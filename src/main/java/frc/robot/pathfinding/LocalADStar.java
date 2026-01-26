@@ -236,21 +236,54 @@ public class LocalADStar implements Pathfinder {
   public void setProblem(Pose2d startPose, Pose2d goalPose, Translation2d startVelocity) {
     requestLock.writeLock().lock();
     try {
+      // === DEBUG: Raw input poses ===
+      System.out.println("\n========== AD* SET PROBLEM DEBUG ==========");
+      System.out.println("[AD*] START Pose: (" + String.format("%.3f", startPose.getX()) + ", "
+          + String.format("%.3f", startPose.getY()) + ", "
+          + String.format("%.1f", startPose.getRotation().getDegrees()) + "°)");
+      System.out.println("[AD*] GOAL Pose: (" + String.format("%.3f", goalPose.getX()) + ", "
+          + String.format("%.3f", goalPose.getY()) + ", "
+          + String.format("%.1f", goalPose.getRotation().getDegrees()) + "°)");
+      System.out.println("[AD*] Start Velocity: (" + String.format("%.3f", startVelocity.getX())
+          + ", " + String.format("%.3f", startVelocity.getY()) + ") m/s");
+
+      GridPosition rawStartGrid = getGridPos(startPose.getTranslation());
+      GridPosition rawGoalGrid = getGridPos(goalPose.getTranslation());
+      System.out.println(
+          "[AD*] Raw Start Grid: (" + rawStartGrid.x() + ", " + rawStartGrid.y() + ")");
+      System.out.println("[AD*] Raw Goal Grid: (" + rawGoalGrid.x() + ", " + rawGoalGrid.y() + ")");
+      System.out.println("[AD*] Start in obstacle? " + inflatedObstacles.contains(rawStartGrid));
+      System.out.println("[AD*] Goal in obstacle? " + inflatedObstacles.contains(rawGoalGrid));
+
       GridPosition startPos = findClosestNonObstacle(getGridPos(startPose.getTranslation()));
       if (startPos != null) {
         requestStart = startPos;
         requestRealStartPose = startPose;
+        System.out.println(
+            "[AD*] Adjusted Start Grid: (" + startPos.x() + ", " + startPos.y() + ")");
+        System.out.println("[AD*] Start Grid → Field: ("
+            + String.format("%.3f", gridPosToTranslation(startPos).getX()) + ", "
+            + String.format("%.3f", gridPosToTranslation(startPos).getY()) + ")");
+      } else {
+        System.out.println("[AD*] ERROR: Could not find non-obstacle start position!");
       }
       GridPosition gridPos = findClosestNonObstacle(getGridPos(goalPose.getTranslation()));
       if (gridPos != null) {
         requestGoal = gridPos;
         requestRealGoalPose = goalPose;
         currentGoalPose.set(goalPose);
+        System.out.println("[AD*] Adjusted Goal Grid: (" + gridPos.x() + ", " + gridPos.y() + ")");
+        System.out.println("[AD*] Goal Grid → Field: ("
+            + String.format("%.3f", gridPosToTranslation(gridPos).getX()) + ", "
+            + String.format("%.3f", gridPosToTranslation(gridPos).getY()) + ")");
+      } else {
+        System.out.println("[AD*] ERROR: Could not find non-obstacle goal position!");
       }
       requestStartVelocity = startVelocity;
       requestMinor = true;
       requestReset = true;
       newPathAvailable.set(false);
+      System.out.println("=========================================\n");
     } finally {
       requestLock.writeLock().unlock();
     }
@@ -335,15 +368,46 @@ public class LocalADStar implements Pathfinder {
       Pose2d realGoalPose) {
 
     if (needsReset) {
+      System.out.println("[AD*] Resetting algorithm...");
       reset(sStart, sGoal);
     }
 
     if (doMinor) {
+      System.out.println("\n========== AD* PATH COMPUTATION DEBUG ==========");
+      System.out.println("[AD*] Computing path from grid (" + sStart.x() + ", " + sStart.y()
+          + ") to (" + sGoal.x() + ", " + sGoal.y() + ")");
+
       computeOrImprovePath(sStart, sGoal);
 
       List<GridPosition> pathPositions = extractPath(sStart, sGoal);
+      System.out.println("[AD*] Extracted " + pathPositions.size() + " grid positions");
+
+      // Log raw grid path
+      if (pathPositions.size() > 0) {
+        System.out.println("[AD*] Grid Path:");
+        for (int i = 0; i < Math.min(pathPositions.size(), 10); i++) {
+          GridPosition gp = pathPositions.get(i);
+          Translation2d fieldPos = gridPosToTranslation(gp);
+          System.out.println("  [" + i + "] Grid(" + gp.x() + ", " + gp.y() + ") → Field("
+              + String.format("%.2f", fieldPos.getX()) + ", "
+              + String.format("%.2f", fieldPos.getY()) + ")");
+        }
+        if (pathPositions.size() > 10) {
+          System.out.println("  ... (" + (pathPositions.size() - 10) + " more positions)");
+        }
+      }
+
       List<Translation2d> waypoints =
           convertToWaypoints(pathPositions, realStartPose, realGoalPose);
+
+      // Log final waypoints
+      System.out.println("[AD*] Converted to " + waypoints.size() + " waypoints:");
+      for (int i = 0; i < waypoints.size(); i++) {
+        Translation2d wp = waypoints.get(i);
+        System.out.println("  WP[" + i + "]: (" + String.format("%.3f", wp.getX()) + ", "
+            + String.format("%.3f", wp.getY()) + ")");
+      }
+      System.out.println("================================================\n");
 
       currentPathWaypoints.set(waypoints);
       newPathAvailable.set(true);
