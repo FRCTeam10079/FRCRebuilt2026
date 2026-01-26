@@ -95,6 +95,15 @@ public class RobotContainer {
         // ==================== OPERATOR CONTROLS ====================
         // TODO: Add intake controls
         m_driverController.x().whileTrue(new IntakeCommand(intake));
+        // Added Toggle Control (Need to test)
+
+        // m_driverController
+        //    .x()
+        //   .toggleOnTrue(new StartEndCommand(
+        //           () -> intake.intakeIn(), // what to do when pressed
+        //          () -> intake.stop(), // what to do when released
+        //          intake // required subsystem
+        //          ));
         // TODO: Add shooter controls
         // TODO: Add climb controls
 
