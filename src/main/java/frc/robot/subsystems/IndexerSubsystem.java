@@ -10,11 +10,13 @@ import frc.robot.Constants.IndexerConstants;
 public class IndexerSubsystem extends SubsystemBase {
 
   private final TalonFX feederMotor;
-  private final TalonFX spindexerMotor; // Follower
+  // private final TalonFX spindexerMotor; // Follower commented out to see if it helps with issues
 
   public IndexerSubsystem() {
-    feederMotor = new TalonFX(IndexerConstants.kFeederMotorID);
-    spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID);
+    String kCANbus = "canivore"; 
+
+    feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, kCANbus);
+    // spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus); // Commented out to see if it helps with issues
 
     TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -39,10 +41,12 @@ public class IndexerSubsystem extends SubsystemBase {
 
     // Configure the FOLLOWER
     // We apply the same safety config to the follower too, just to be safe.
-    spindexerMotor.getConfigurator().apply(config);
+    //Commented out to see if it helps with issues
+    // spindexerMotor.getConfigurator().apply(config);
 
     // Tell the follower to listen to the leader
-    spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID, false));
+    // Commented out to see if it helps with issues
+    //spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID, false));
   }
 
   public void setSpeed(double speed) {

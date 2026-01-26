@@ -167,8 +167,8 @@ public final class Constants {
 
   public static final class IndexerConstants {
 
-    public static final int kFeederMotorID = 15; // This ID is a placeholder
-    public static final int kSpindexerMotorID = 20; // This id confirmed
+    public static final int kFeederMotorID = 20; // This ID confirmed
+    public static final int kSpindexerMotorID = 15; // This id not confirmed
 
     // Safety Limits
     public static final int kCurrentLimit = 40;

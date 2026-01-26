@@ -22,6 +22,12 @@ public class RunIndexer extends Command {
     indexer.setSpeed(speed);
   }
 
+  @Override
+  public void execute() {
+    // Forces motor to keep spinning even if a CAN packet was dropped.
+    indexer.setSpeed(speed); 
+  }
+
   // Turn off when command ends (button released)
   @Override
   public void end(boolean interrupted) {
