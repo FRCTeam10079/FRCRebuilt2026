@@ -1,0 +1,315 @@
+package frc.robot.pathfinding;
+
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.subsystems.CommandSwerveDrivetrain;
+import java.util.List;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
+
+/**
+ * Command that pathfinds to a target pose using the AD* algorithm and follows the path using PID
+ * control.
+ *
+ * <p>This command combines pathfinding logic (AD* search on a navgrid) with motion control pattern
+ * (PID-based trajectory following).
+ *
+ * <p>The command: Sets the pathfinding goal (e.g., AprilTag scoring pose) Waits for the AD*
+ * background thread to calculate a path Follows the path using pure pursuit / PID control Ends when
+ * the robot reaches the goal within tolerance
+ */
+public class PathfindToTagCommand extends Command {
+
+  private final CommandSwerveDrivetrain drivetrain;
+  private final Supplier<Pose2d> targetPoseSupplier;
+  private final PathConstraints constraints;
+
+  // PID controllers for path following
+  private final PIDController xController;
+  private final PIDController yController;
+  private final PIDController rotationController;
+
+  // State
+  private Pose2d targetPose;
+  private List<Translation2d> currentPath;
+  private int currentWaypointIndex;
+  private final Timer pathWaitTimer = new Timer();
+  private boolean hasPath = false;
+
+  // Pure pursuit parameters
+  private static final double LOOKAHEAD_DISTANCE = 0.5; // meters
+  private static final double WAYPOINT_TOLERANCE = 0.3; // meters to advance waypoint
+
+  /**
+   * Create a command to pathfind to a specific AprilTag.
+   *
+   * @param drivetrain The swerve drivetrain
+   * @param tagId The AprilTag ID to target
+   */
+  public static PathfindToTagCommand toAprilTag(CommandSwerveDrivetrain drivetrain, int tagId) {
+    return new PathfindToTagCommand(
+        drivetrain,
+        () -> PathfindingConstants.getScoringPoseForTag(tagId),
+        PathConstraints.DEFAULT);
+  }
+
+  /**
+   * Create a command to pathfind to AprilTag 10 (Red Alliance Hub Face).
+   *
+   * @param drivetrain The swerve drivetrain
+   */
+  public static PathfindToTagCommand toAprilTag10(CommandSwerveDrivetrain drivetrain) {
+    return toAprilTag(drivetrain, 10);
+  }
+
+  /**
+   * Create a pathfinding command.
+   *
+   * @param drivetrain The swerve drivetrain
+   * @param targetPoseSupplier Supplier for the target pose
+   * @param constraints Path following constraints
+   */
+  public PathfindToTagCommand(
+      CommandSwerveDrivetrain drivetrain,
+      Supplier<Pose2d> targetPoseSupplier,
+      PathConstraints constraints) {
+
+    this.drivetrain = drivetrain;
+    this.targetPoseSupplier = targetPoseSupplier;
+    this.constraints = constraints;
+
+    // Translation PID (field-relative)
+    this.xController = new PIDController(3.0, 0.0, 0.1);
+    this.yController = new PIDController(3.0, 0.0, 0.1);
+
+    // Rotation PID with continuous input
+    this.rotationController = new PIDController(3.0, 0.0, 0.1);
+    this.rotationController.enableContinuousInput(-Math.PI, Math.PI);
+
+    addRequirements(drivetrain);
+  }
+
+  @Override
+  public void initialize() {
+    // Get target pose
+    targetPose = targetPoseSupplier.get();
+
+    // Get current robot state
+    Pose2d currentPose = drivetrain.getState().Pose;
+    ChassisSpeeds currentSpeeds = drivetrain.getState().Speeds;
+
+    // Convert to field-relative velocity
+    ChassisSpeeds fieldSpeeds =
+        ChassisSpeeds.fromRobotRelativeSpeeds(currentSpeeds, currentPose.getRotation());
+    Translation2d velocity =
+        new Translation2d(fieldSpeeds.vxMetersPerSecond, fieldSpeeds.vyMetersPerSecond);
+
+    // Ensure pathfinder is initialized
+    Pathfinding.ensureInitialized();
+
+    // Set the pathfinding problem
+    Pathfinding.setProblem(currentPose, targetPose, velocity);
+
+    // Reset state
+    currentPath = null;
+    currentWaypointIndex = 0;
+    hasPath = false;
+    pathWaitTimer.restart();
+
+    // Reset PID controllers
+    xController.reset();
+    yController.reset();
+    rotationController.reset();
+
+    System.out.println("[PathfindToTag] Starting pathfind from "
+        + formatPose(currentPose)
+        + " to "
+        + formatPose(targetPose));
+  }
+
+  @Override
+  public void execute() {
+    Pose2d currentPose = drivetrain.getState().Pose;
+
+    // Check for new path from background thread
+    if (Pathfinding.isNewPathAvailable()) {
+      currentPath = Pathfinding.getCurrentPathWaypoints();
+      currentWaypointIndex = 0;
+      hasPath = currentPath != null && currentPath.size() >= 2;
+
+      if (hasPath) {
+        System.out.println(
+            "[PathfindToTag] Received path with " + currentPath.size() + " waypoints");
+      }
+    }
+
+    // If no path yet, wait
+    if (!hasPath) {
+      Logger.recordOutput("Pathfinding/Status", "Waiting for path...");
+      Logger.recordOutput("Pathfinding/WaitTime", pathWaitTimer.get());
+
+      // Timeout - just try to drive directly
+      if (pathWaitTimer.hasElapsed(1.0)) {
+        System.out.println("[PathfindToTag] Path timeout, driving directly to goal");
+        driveTowardsPose(currentPose, targetPose);
+      }
+      return;
+    }
+
+    // Find current target waypoint using lookahead
+    Translation2d targetWaypoint = findLookaheadPoint(currentPose);
+
+    // Log state
+    Logger.recordOutput("Pathfinding/Status", "Following path");
+    Logger.recordOutput("Pathfinding/CurrentWaypoint", currentWaypointIndex);
+    Logger.recordOutput("Pathfinding/TotalWaypoints", currentPath.size());
+    Logger.recordOutput("Pathfinding/TargetWaypoint", targetWaypoint);
+    Logger.recordOutput("Pathfinding/GoalPose", targetPose);
+
+    // Calculate velocities using PID
+    double xVelocity = clampVelocity(
+        xController.calculate(currentPose.getX(), targetWaypoint.getX()),
+        constraints.maxVelocityMps());
+
+    double yVelocity = clampVelocity(
+        yController.calculate(currentPose.getY(), targetWaypoint.getY()),
+        constraints.maxVelocityMps());
+
+    // Rotation towards goal pose
+    double rotationVelocity = clampVelocity(
+        rotationController.calculate(
+            currentPose.getRotation().getRadians(), targetPose.getRotation().getRadians()),
+        constraints.maxAngularVelocityRadPerSec());
+
+    // Apply to drivetrain as field-relative speeds
+    ChassisSpeeds fieldSpeeds = new ChassisSpeeds(xVelocity, yVelocity, rotationVelocity);
+    ChassisSpeeds robotSpeeds =
+        ChassisSpeeds.fromFieldRelativeSpeeds(fieldSpeeds, currentPose.getRotation());
+
+    drivetrain.setControl(
+        new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds().withSpeeds(robotSpeeds));
+
+    // Advance waypoint if close enough
+    advanceWaypointIfNeeded(currentPose);
+
+    // Update pathfinder with current pose for dynamic replanning
+    Pathfinding.setStartPose(currentPose);
+  }
+
+  @Override
+  public void end(boolean interrupted) {
+    // Stop the robot
+    drivetrain.setControl(new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds()
+        .withSpeeds(new ChassisSpeeds()));
+
+    if (interrupted) {
+      System.out.println("[PathfindToTag] Command interrupted");
+    } else {
+      System.out.println("[PathfindToTag] Reached goal: " + formatPose(targetPose));
+    }
+  }
+
+  @Override
+  public boolean isFinished() {
+    Pose2d currentPose = drivetrain.getState().Pose;
+
+    // Check position tolerance
+    double positionError = currentPose.getTranslation().getDistance(targetPose.getTranslation());
+    boolean positionOk = positionError < PathfindingConstants.POSITION_TOLERANCE_METERS;
+
+    // Check rotation tolerance
+    double rotationError =
+        Math.abs(currentPose.getRotation().minus(targetPose.getRotation()).getRadians());
+    boolean rotationOk = rotationError < PathfindingConstants.ROTATION_TOLERANCE_RADIANS;
+
+    return positionOk && rotationOk;
+  }
+
+  // ==================== Path Following Helpers ====================
+
+  private Translation2d findLookaheadPoint(Pose2d currentPose) {
+    if (currentPath == null || currentPath.isEmpty()) {
+      return targetPose.getTranslation();
+    }
+
+    Translation2d robotPos = currentPose.getTranslation();
+
+    // Start from current waypoint index
+    for (int i = currentWaypointIndex; i < currentPath.size(); i++) {
+      Translation2d waypoint = currentPath.get(i);
+      double distance = robotPos.getDistance(waypoint);
+
+      if (distance >= LOOKAHEAD_DISTANCE) {
+        // Interpolate to exact lookahead distance
+        if (i > 0) {
+          Translation2d prev = currentPath.get(i - 1);
+          Translation2d direction = waypoint.minus(prev);
+          double segmentLength = direction.getNorm();
+          if (segmentLength > 0.01) {
+            // Find point on segment at lookahead distance from robot
+            Translation2d toRobot = robotPos.minus(prev);
+            double projection =
+                toRobot.getX() * direction.getX() + toRobot.getY() * direction.getY();
+            projection /= segmentLength * segmentLength;
+            projection = Math.max(0, Math.min(1, projection));
+            Translation2d closestPoint = prev.plus(direction.times(projection));
+
+            // Move lookahead distance along segment from closest point
+            Translation2d segmentDir = direction.div(segmentLength);
+            return closestPoint.plus(segmentDir.times(LOOKAHEAD_DISTANCE));
+          }
+        }
+        return waypoint;
+      }
+    }
+
+    // Return final goal
+    return targetPose.getTranslation();
+  }
+
+  private void advanceWaypointIfNeeded(Pose2d currentPose) {
+    if (currentPath == null || currentWaypointIndex >= currentPath.size() - 1) {
+      return;
+    }
+
+    Translation2d waypoint = currentPath.get(currentWaypointIndex);
+    double distance = currentPose.getTranslation().getDistance(waypoint);
+
+    if (distance < WAYPOINT_TOLERANCE) {
+      currentWaypointIndex++;
+    }
+  }
+
+  private void driveTowardsPose(Pose2d currentPose, Pose2d goal) {
+    double xVelocity = clampVelocity(
+        xController.calculate(currentPose.getX(), goal.getX()), constraints.maxVelocityMps() * 0.3);
+
+    double yVelocity = clampVelocity(
+        yController.calculate(currentPose.getY(), goal.getY()), constraints.maxVelocityMps() * 0.3);
+
+    double rotationVelocity = clampVelocity(
+        rotationController.calculate(
+            currentPose.getRotation().getRadians(), goal.getRotation().getRadians()),
+        constraints.maxAngularVelocityRadPerSec() * 0.3);
+
+    ChassisSpeeds fieldSpeeds = new ChassisSpeeds(xVelocity, yVelocity, rotationVelocity);
+    ChassisSpeeds robotSpeeds =
+        ChassisSpeeds.fromFieldRelativeSpeeds(fieldSpeeds, currentPose.getRotation());
+
+    drivetrain.setControl(
+        new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds().withSpeeds(robotSpeeds));
+  }
+
+  private double clampVelocity(double velocity, double max) {
+    return Math.max(-max, Math.min(max, velocity));
+  }
+
+  private String formatPose(Pose2d pose) {
+    return String.format(
+        "(%.2f, %.2f, %.1f°)", pose.getX(), pose.getY(), pose.getRotation().getDegrees());
+  }
+}
