@@ -251,10 +251,13 @@ public final class Constants {
     }
 
     // Red side tag IDs (for direction flipping logic)
-    public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
 
     // Blue side tag IDs
-    public static final int[] BLUE_SIDE_TAGS = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+    public static final int[] BLUE_SIDE_TAGS = {
+      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+    };
   }
 
   /** Alignment position enum - left or right side offset from AprilTag */
