@@ -4,12 +4,16 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import java.util.List;
 import java.util.function.Supplier;
-import org.littletonrobotics.junction.Logger;
 
 /**
  * Command that pathfinds to a target pose using the AD* algorithm and follows the path using PID
@@ -42,6 +46,13 @@ public class PathfindToTagCommand extends Command {
 
   // Debug counter for periodic logging
   private int debugCounter = 0;
+
+  // NetworkTables publishers for AdvantageScope visualization
+  private final NetworkTable pathfindingTable;
+  private final StructPublisher<Pose2d> currentPosePublisher;
+  private final StructPublisher<Pose2d> goalPosePublisher;
+  private final StructPublisher<Pose2d> targetWaypointPublisher;
+  private final StructArrayPublisher<Pose2d> pathPublisher;
 
   // Pure pursuit parameters
   private static final double LOOKAHEAD_DISTANCE = 0.5; // meters
@@ -92,6 +103,16 @@ public class PathfindToTagCommand extends Command {
     // Rotation PID with continuous input
     this.rotationController = new PIDController(3.0, 0.0, 0.1);
     this.rotationController.enableContinuousInput(-Math.PI, Math.PI);
+
+    // Initialize NetworkTables publishers for AdvantageScope
+    pathfindingTable = NetworkTableInstance.getDefault().getTable("Pathfinding");
+    currentPosePublisher =
+        pathfindingTable.getStructTopic("CurrentPose", Pose2d.struct).publish();
+    goalPosePublisher =
+        pathfindingTable.getStructTopic("GoalPose", Pose2d.struct).publish();
+    targetWaypointPublisher =
+        pathfindingTable.getStructTopic("TargetWaypoint", Pose2d.struct).publish();
+    pathPublisher = pathfindingTable.getStructArrayTopic("Path", Pose2d.struct).publish();
 
     addRequirements(drivetrain);
   }
@@ -167,8 +188,8 @@ public class PathfindToTagCommand extends Command {
 
     // If no path yet, wait
     if (!hasPath) {
-      Logger.recordOutput("Pathfinding/Status", "Waiting for path...");
-      Logger.recordOutput("Pathfinding/WaitTime", pathWaitTimer.get());
+      SmartDashboard.putString("Pathfinding/Status", "Waiting for path...");
+      SmartDashboard.putNumber("Pathfinding/WaitTime", pathWaitTimer.get());
 
       // Timeout - just try to drive directly
       if (pathWaitTimer.hasElapsed(1.0)) {
@@ -181,12 +202,10 @@ public class PathfindToTagCommand extends Command {
     // Find current target waypoint using lookahead
     Translation2d targetWaypoint = findLookaheadPoint(currentPose);
 
-    // Log state
-    Logger.recordOutput("Pathfinding/Status", "Following path");
-    Logger.recordOutput("Pathfinding/CurrentWaypoint", currentWaypointIndex);
-    Logger.recordOutput("Pathfinding/TotalWaypoints", currentPath.size());
-    Logger.recordOutput("Pathfinding/TargetWaypoint", targetWaypoint);
-    Logger.recordOutput("Pathfinding/GoalPose", targetPose);
+    // Log state to SmartDashboard (works with AdvantageScope)
+    SmartDashboard.putString("Pathfinding/Status", "Following path");
+    SmartDashboard.putNumber("Pathfinding/CurrentWaypoint", currentWaypointIndex);
+    SmartDashboard.putNumber("Pathfinding/TotalWaypoints", currentPath.size());
 
     // Calculate velocities using PID
     double xVelocity = clampVelocity(
@@ -239,27 +258,26 @@ public class PathfindToTagCommand extends Command {
           + String.format("%.3f", robotSpeeds.omegaRadiansPerSecond));
     }
 
-    // === ADVANTAGEKIT LOGGING ===
-    Logger.recordOutput("Pathfinding/CurrentPose", currentPose);
-    Logger.recordOutput(
-        "Pathfinding/TargetWaypointPose", new Pose2d(targetWaypoint, targetPose.getRotation()));
-    Logger.recordOutput(
-        "Pathfinding/FieldVelocity", new double[] {xVelocity, yVelocity, rotationVelocity});
-    Logger.recordOutput("Pathfinding/RobotVelocity", new double[] {
-      robotSpeeds.vxMetersPerSecond,
-      robotSpeeds.vyMetersPerSecond,
-      robotSpeeds.omegaRadiansPerSecond
-    });
-    Logger.recordOutput("Pathfinding/PositionError", new double[] {
-      targetWaypoint.getX() - currentPose.getX(), targetWaypoint.getY() - currentPose.getY()
-    });
+    // === NETWORKTABLES LOGGING FOR ADVANTAGESCOPE ===
+    // Publish poses for 2D field visualization
+    currentPosePublisher.set(currentPose);
+    goalPosePublisher.set(targetPose);
+    targetWaypointPublisher.set(new Pose2d(targetWaypoint, targetPose.getRotation()));
+
+    // Publish velocity data to SmartDashboard
+    SmartDashboard.putNumber("Pathfinding/VelX", xVelocity);
+    SmartDashboard.putNumber("Pathfinding/VelY", yVelocity);
+    SmartDashboard.putNumber("Pathfinding/VelOmega", rotationVelocity);
+    SmartDashboard.putNumber("Pathfinding/ErrorX", targetWaypoint.getX() - currentPose.getX());
+    SmartDashboard.putNumber("Pathfinding/ErrorY", targetWaypoint.getY() - currentPose.getY());
+
+    // Publish path for visualization
     if (currentPath != null && !currentPath.isEmpty()) {
-      // Log the path as array of poses for visualization
       Pose2d[] pathPoses = new Pose2d[currentPath.size()];
       for (int i = 0; i < currentPath.size(); i++) {
         pathPoses[i] = new Pose2d(currentPath.get(i), targetPose.getRotation());
       }
-      Logger.recordOutput("Pathfinding/PathWaypoints", pathPoses);
+      pathPublisher.set(pathPoses);
     }
 
     drivetrain.setControl(
