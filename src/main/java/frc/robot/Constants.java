@@ -207,9 +207,6 @@ public final class Constants {
   /**
    * AprilTag positions on the field
    *
-   * <p>NOTE: This is a PLACEHOLDER using 2025 Reefscape field layout! Replace with actual 2026
-   * REBUILT field AprilTag positions when released.
-   *
    * <p>Format: HashMap<TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}>
    */
   public static final class AprilTagMaps {

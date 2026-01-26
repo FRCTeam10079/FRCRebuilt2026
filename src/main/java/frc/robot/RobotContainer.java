@@ -34,6 +34,9 @@ public class RobotContainer {
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
 
+  // Telemetry - publishes robot pose to Elastic dashboard
+  private final Telemetry logger = new Telemetry(Constants.DrivetrainConstants.MAX_SPEED_MPS);
+
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
@@ -63,6 +66,9 @@ public class RobotContainer {
    * buttons to commands
    */
   private void configureBindings() {
+    // Register telemetry to publish robot pose to NetworkTables for Elastic dashboard
+    drivetrain.registerTelemetry(logger::telemeterize);
+
     // ==================== DRIVER CONTROLS ====================
     drivetrain.setDefaultCommand(drivetrain.smoothTeleopDriveCommand(
         () -> m_driverController.getLeftY(), // Forward/backward
