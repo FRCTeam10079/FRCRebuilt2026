@@ -24,12 +24,12 @@ public class IndexerSubsystem extends SubsystemBase {
 
     // Supply limit
     // Prevents the motor from drawing too much from   the battery and browning out the robot.
-    config.CurrentLimits.SupplyCurrentLimit = 30; // 30 Amps from battery
+    config.CurrentLimits.SupplyCurrentLimit = 40; // 30 Amps from battery
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
     // Ramp rate for protection
-    config.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0.25; // 0.25 seconds to full speed
-    config.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0.25;
+    config.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0; // 0.25 seconds to full speed
+    config.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0;
 
     // Brake Mode
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;

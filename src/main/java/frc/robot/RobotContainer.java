@@ -84,13 +84,15 @@ public class RobotContainer {
 
     m_driverController
         .rightTrigger(0.5)
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed));
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
 
     // B Button - Run Indexer Reverse (Unjam)
 
     m_driverController
         .b()
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed));
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController
