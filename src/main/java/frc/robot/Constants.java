@@ -166,7 +166,8 @@ public final class Constants {
   }
   public static final class IndexerConstants {
     // CHANGE ID to what tuner x says
-    public static final int kIndexerMotorID = 15; 
+    public static final int kFeederMotorID = 15;  
+    public static final int kSpindexerMotorID = 20;
     
     // Safety Limits
     public static final int kCurrentLimit = 40; 
