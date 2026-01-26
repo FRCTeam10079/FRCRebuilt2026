@@ -6,10 +6,10 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
-import frc.robot.commands.IntakeCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IntakeSubsystem;
@@ -94,16 +94,16 @@ public class RobotContainer {
 
         // ==================== OPERATOR CONTROLS ====================
         // TODO: Add intake controls
-        m_driverController.x().whileTrue(new IntakeCommand(intake));
+
         // Added Toggle Control (Need to test)
 
-        // m_driverController
-        //    .x()
-        //   .toggleOnTrue(new StartEndCommand(
-        //           () -> intake.intakeIn(), // what to do when pressed
-        //          () -> intake.stop(), // what to do when released
-        //          intake // required subsystem
-        //          ));
+        m_driverController
+                .x()
+                .toggleOnTrue(new StartEndCommand(
+                        () -> intake.intakeIn(), // what to do when pressed
+                        () -> intake.stop(), // what to do when released
+                        intake // required subsystem
+                        ));
         // TODO: Add shooter controls
         // TODO: Add climb controls
 
