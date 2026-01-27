@@ -26,6 +26,8 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
 
+
+// TODO: Clean this file up.
 public class AimOntheMove extends Command {
 
     // Subsystems from RobotContainer
@@ -175,7 +177,7 @@ public class AimOntheMove extends Command {
 
         double distanceToHub = Math.sqrt( Math.pow((drivetrain.getState().Pose.getX() - aprilTagPose.getX()), 2) + Math.pow((drivetrain.getState().Pose.getY() - aprilTagPose.getY()), 2));
         double ballTimeInAir = distanceToHub / Math.cos(pivotAngle) * ballExitSpeed; 
-        
+
         Pose2d aprilTagPoseAdjusted = new Pose2d(
             aprilTagList[0] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vxMetersPerSecond * ballTimeInAir,
             aprilTagList[1] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vyMetersPerSecond * ballTimeInAir, 

@@ -207,9 +207,6 @@ public final class Constants {
   /**
    * AprilTag positions on the field
    *
-   * <p>NOTE: This is a PLACEHOLDER using 2025 Reefscape field layout! Replace with actual 2026
-   * REBUILT field AprilTag positions when released.
-   *
    * <p>Format: HashMap<TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}>
    */
   public static final class AprilTagMaps {
@@ -254,10 +251,13 @@ public final class Constants {
     }
 
     // Red side tag IDs (for direction flipping logic)
-    public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    };
 
     // Blue side tag IDs
-    public static final int[] BLUE_SIDE_TAGS = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
+    public static final int[] BLUE_SIDE_TAGS = {
+      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+    };
   }
 
   /** Alignment position enum - left or right side offset from AprilTag */
@@ -267,221 +267,10 @@ public final class Constants {
     CENTER
   }
 
-<<<<<<< HEAD
-        // ==================== DEADBAND ====================
-        public static final double DEADBAND_PERCENT = 0.1;
-
-        // Vision alignment tolerances
-        public static final double POSITION_TOLERANCE_METERS = 0.02; // 2cm position tolerance
-        public static final double YAW_TOLERANCE_RADIANS = Math.PI / 32; // ~5.6 degrees
-
-        // Alignment PID values
-        public static final double ALIGN_PID_KP = 8.0;
-        public static final double ALIGN_PID_KI = 0.0;
-        public static final double ALIGN_PID_KD = 0.01;
-        public static final double ALIGN_ROTATION_KP = 3.0;
-        public static final double ALIGN_ROTATION_KD = 0.02;
-
-        // Movement speeds during alignment (m/s, rad/s)
-        public static final double ALIGN_SPEED_MPS = 3.5;
-        public static final double ALIGN_ROTATION_SPEED = 0.9;
-
-        // Alignment offset distances from AprilTag (meters)
-        // These define where the robot stops relative to the tag
-        public static final double ALIGN_OFFSET_X_LEFT = -0.41; // Back from tag for LEFT
-        public static final double ALIGN_OFFSET_Y_LEFT = 0.13; // Left of tag center
-        public static final double ALIGN_OFFSET_X_RIGHT = -0.41; // Back from tag for RIGHT
-        public static final double ALIGN_OFFSET_Y_RIGHT = -0.23; // Right of tag center
-        public static final double ALIGN_OFFSET_X_CENTER = -0.50; // Back from tag for CENTER
-        public static final double ALIGN_OFFSET_Y_CENTER = 0.0; // Centered on tag
-    }
-
-    /** Intake constants (placeholder) */
-    public static final class IntakeConstants {
-        public static final double INTAKE_SPEED = 0.8;
-        public static final double OUTTAKE_SPEED = -0.5;
-        public static final int INTAKE_MOTOR_ID = 0; // TODO: Make real
-        public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
-        public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
-        public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
-        public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
-    }
-
-    /** Shooter constants (placeholder) */
-    public static final class ShooterConstants {
-        // Target RPM values (will vary based on distance)
-        public static final double SHOOTER_IDLE_RPM = 0;
-        public static final double SHOOTER_SPINUP_RPM = 3000;
-        public static final double SHOOTER_MAX_RPM = 5000;
-
-        // RPM tolerance for "at setpoint" check
-        public static final double SHOOTER_RPM_TOLERANCE = 100;
-
-        // Feeder speed when firing
-        public static final double FEEDER_SPEED = 1.0;
-    }
-
-    /** Climber constants (placeholder) */
-    public static final class ClimberConstants {
-        // Climber arm positions (encoder units - fill in with actual values later)
-        public static final double CLIMBER_STOWED_POSITION = 0;
-        public static final double CLIMBER_L1_REACH_POSITION = 50;
-        public static final double CLIMBER_L2_REACH_POSITION = 80;
-        public static final double CLIMBER_L3_REACH_POSITION = 100;
-
-        // Climber motor speeds
-        public static final double CLIMBER_EXTEND_SPEED = 0.7;
-        public static final double CLIMBER_RETRACT_SPEED = -0.8;
-    }
-
-    /** State machine timing constants */
-    public static final class StateMachineConstants {
-        // Rumble feedback durations (seconds)
-        public static final double RUMBLE_SHORT = 0.15;
-        public static final double RUMBLE_MEDIUM = 0.3;
-        public static final double RUMBLE_LONG = 0.5;
-        public static final double RUMBLE_EXTRA_LONG = 1.0;
-
-        // Rumble intensities
-        public static final double RUMBLE_LIGHT = 0.3;
-        public static final double RUMBLE_MEDIUM_INTENSITY = 0.5;
-        public static final double RUMBLE_STRONG = 0.8;
-        public static final double RUMBLE_MAX = 1.0;
-
-        // State history buffer size
-        public static final int STATE_HISTORY_SIZE = 20;
-
-        /** Minimum cycle time to be considered valid (seconds) */
-        public static final double MIN_VALID_CYCLE_TIME = 1.0;
-    }
-
-    /** Vision/Limelight constants (placeholder) */
-    public static final class VisionConstants {
-        public static final String LIMELIGHT_NAME = "limelight";
-
-        // Pipeline IDs
-        public static final int PIPELINE_HUB_TRACKING = 0;
-        public static final int PIPELINE_FUEL_DETECTION = 1;
-        public static final int PIPELINE_APRILTAG = 2;
-
-        // Target height for hub (inches from floor)
-        public static final double HUB_TARGET_HEIGHT_INCHES = 104.0; // Placeholder
-
-        // Camera mounting (inches)
-        public static final double CAMERA_HEIGHT_INCHES = 24.0; // Placeholder
-        public static final double CAMERA_MOUNT_ANGLE_DEGREES = 30.0; // Placeholder
-    }
-
-    // ==================== UTILITY METHODS ====================
-
-    /** Inches to Meters conversion factor */
-    public static final double INCHES_TO_METERS = 0.0254;
-
-    /**
-     * Check if a value exists in an array
-     *
-     * @param array The array to search
-     * @param value The value to find
-     * @return True if value is in array
-     */
-    public static boolean contains(double[] array, double value) {
-        for (double element : array) {
-            if (element == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Check if an int value exists in an int array
-     *
-     * @param array The array to search
-     * @param value The value to find
-     * @return True if value is in array
-     */
-    public static boolean contains(int[] array, int value) {
-        for (int element : array) {
-            if (element == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // ==================== APRIL TAG FIELD LAYOUT ====================
-
-    // Updated for 2026, no longer placeholder
-
-    public static final class AprilTagMaps {
-        public static final java.util.HashMap<Integer, double[]> aprilTagMap = new java.util.HashMap<>();
-
-        static {
-            // Points are in inches, Angles are in degrees
-            // Format: {X, Y, Z, Yaw, Pitch}
-            aprilTagMap.put(1, new double[]{142.04, 133.48, 34.99, 180.0, 0.0});
-            aprilTagMap.put(2, new double[]{143.51, 23.76, 44.27, 90.0, 0.0});
-            aprilTagMap.put(3, new double[]{119.74, 14.01, 44.27, 180.0, 0.0});
-            aprilTagMap.put(4, new double[]{119.74, 0.01, 44.27, 180.0, 0.0});
-            aprilTagMap.put(5, new double[]{143.51, -23.75, 44.27, 270.0, 0.0});
-            aprilTagMap.put(6, new double[]{142.04, -133.45, 34.99, 180.0, 0.0});
-            aprilTagMap.put(7, new double[]{144.97, -133.45, 34.99, 0.0, 0.0});
-            aprilTagMap.put(8, new double[]{157.50, -23.75, 44.27, 270.0, 0.0});
-            aprilTagMap.put(9, new double[]{167.27, -13.99, 44.27, 0.0, 0.0});
-            aprilTagMap.put(10, new double[]{167.27, 0.01, 44.27, 0.0, 0.0});
-            aprilTagMap.put(11, new double[]{157.50, 23.76, 44.27, 90.0, 0.0});
-            aprilTagMap.put(12, new double[]{144.97, 133.47, 34.99, 0.0, 0.0});
-            aprilTagMap.put(13, new double[]{325.31, 132.63, 21.74, 180.0, 0.0});
-            aprilTagMap.put(14, new double[]{325.31, 115.62, 21.74, 180.0, 0.0});
-            aprilTagMap.put(15, new double[]{325.30, 11.38, 21.74, 180.0, 0.0});
-            aprilTagMap.put(16, new double[]{325.30, -5.62, 21.74, 180.0, 0.0});
-
-            aprilTagMap.put(17, new double[]{-142.04, -133.45, 34.99, 0.0, 0.0});
-            aprilTagMap.put(18, new double[]{-143.50, -23.75, 44.27, 270.0, 0.0});
-            aprilTagMap.put(19, new double[]{-119.74, -13.99, 44.27, 0.0, 0.0});
-            aprilTagMap.put(20, new double[]{-119.74, 0.01, 44.27, 0.0, 0.0});
-            aprilTagMap.put(21, new double[]{-143.50, 23.76, 44.27, 90.0, 0.0});
-            aprilTagMap.put(22, new double[]{-142.04, 133.47, 34.99, 0.0, 0.0});
-            aprilTagMap.put(23, new double[]{-144.97, 133.47, 34.99, 180.0, 0.0});
-            aprilTagMap.put(24, new double[]{-157.50, 23.76, 44.27, 90.0, 0.0});
-            aprilTagMap.put(25, new double[]{-167.27, 14.01, 44.27, 180.0, 0.0});
-            aprilTagMap.put(26, new double[]{-167.27, 0.01, 44.27, 180.0, 0.0});
-            aprilTagMap.put(27, new double[]{-157.50, -23.75, 44.27, 270.0, 0.0});
-            aprilTagMap.put(28, new double[]{-144.97, -133.45, 34.99, 180.0, 0.0});
-            aprilTagMap.put(29, new double[]{-325.32, -132.65, 21.74, 0.0, 0.0});
-            aprilTagMap.put(30, new double[]{-325.32, -115.61, 21.74, 0.0, 0.0});
-            aprilTagMap.put(31, new double[]{-325.30, -11.36, 21.74, 0.0, 0.0});
-            aprilTagMap.put(32, new double[]{-325.30, 5.63, 21.74, 0.0, 0.0});
-        }
-
-        // Red side tag IDs (for direction flipping logic)
-        // Left half of the field uses tags 1...16
-        public static final int[] RED_SIDE_TAGS = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
-
-        // Blue side tag IDs
-        // Right half of the field uses tags 17...32
-        public static final int[] BLUE_SIDE_TAGS = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32};
-    }
-
-    /** Alignment position enum - left or right side offset from AprilTag */
-    public enum AlignPosition {
-        LEFT,
-        RIGHT,
-        CENTER
-    }
-
-    /** Starting position enum for autonomous */
-    public enum StartingPosition {
-        LEFT,
-        CENTER,
-        RIGHT
-    }
-=======
   /** Starting position enum for autonomous */
   public enum StartingPosition {
     LEFT,
     CENTER,
     RIGHT
   }
->>>>>>> f35c10ea353761640e1991a282e8b39dd28ce6cc
 }
