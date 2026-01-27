@@ -91,9 +91,8 @@ public final class Constants {
 
   /** Intake constants (placeholder) */
   public static final class IntakeConstants {
-    public static final double INTAKE_SPEED = 0.8;
-    public static final double OUTTAKE_SPEED = -0.5;
-    public static final int INTAKE_MOTOR_ID = 0; // TODO: Make real
+    public static final double INTAKE_SPEED = 0.5;
+    public static final int INTAKE_MOTOR_ID = 19; // TODO: Make real
     public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
     public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
     public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
