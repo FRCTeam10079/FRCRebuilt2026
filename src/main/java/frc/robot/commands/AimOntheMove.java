@@ -39,7 +39,7 @@ public class AimOntheMove extends Command {
     // TUNE: Increase for faster alignment, decrease for better control
     private final double maxVelocity = 6.0;  // Max translation speed (m/s)
     // TUNE: Increase for faster rotation, decrease if spinning too fast
-    private final double maxAngularVelocity = 6;
+    private final double maxAngularVelocity = 12;
     
     private Supplier<Double> xInputSupplier;
     private Supplier<Double> yInputSupplier;
@@ -50,9 +50,9 @@ public class AimOntheMove extends Command {
 
     /* ----- PIDs ----- */
     // TUNE: Increase kP for faster approach, decrease if overshooting
-    private PIDController pidDistance = new PIDController(6.0, maxVelocity * 0.5, maxVelocity * 0.25);  // Translation: Increase P for more aggressive, decrease for smoother
+    private PIDController pidDistance = new PIDController(0, 0, 0);  // Translation: Increase P for more aggressive, decrease for smoother
     // TUNE: Increase kP for faster rotation, decrease if rotation is jerky
-    private PIDController pidRotate = new PIDController(8, 0, 0.1
+    private PIDController pidRotate = new PIDController(12, 0, 0
     );    // Rotation: Increase P for faster snap, decrease for smooth turn
 
     // Creates a swerve request that specifies the robot to move FieldCentric
@@ -83,9 +83,6 @@ public class AimOntheMove extends Command {
     private double lastVisionUpdateTime = 0;
     private final int minTagCountForVisionUpdate = 1;  // Minimum tags needed: We only have one limelight
 
-    // X and Y Offset from the April Tag
-    private double offsetX = 0;
-    private double offsetY = 0;
     // Targetted Tag ID
     private int tID;
     // Indicates if tag was detected
@@ -136,6 +133,10 @@ public class AimOntheMove extends Command {
 
         tagDetected = true;
         SmartDashboard.putBoolean("AlignReef/TagDetected", true);
+
+        // Sets Robot Max Speed for Alignment - Might wanna change it
+        // this feels wrong lmfao
+        //robotContainer.MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * 1.0;
     }
 
     /**
@@ -164,12 +165,28 @@ public class AimOntheMove extends Command {
             }
         }
 
-        Pose2d aprilTagPose = new Pose2d(aprilTagList[0] * Constants.INCHES_TO_METERS, aprilTagList[1] * Constants.INCHES_TO_METERS, new Rotation2d(aprilTagList[3] * Math.PI / 180));
+        Pose2d aprilTagPose = new Pose2d(
+            aprilTagList[0] * Constants.INCHES_TO_METERS,
+            aprilTagList[1] * Constants.INCHES_TO_METERS, 
+            new Rotation2d(aprilTagList[3] * Math.PI / 180)
+        );
+        double pivotAngle = Math.PI/4; // Too lazy to actually grab the value for now TODO: read off of the pivot
+        double ballExitSpeed = 5; // meters per second, I'm making up values here.
+
+        double distanceToHub = Math.sqrt( Math.pow((drivetrain.getState().Pose.getX() - aprilTagPose.getX()), 2) + Math.pow((drivetrain.getState().Pose.getY() - aprilTagPose.getY()), 2));
+        double ballTimeInAir = distanceToHub / Math.cos(pivotAngle) * ballExitSpeed; 
+        
+        Pose2d aprilTagPoseAdjusted = new Pose2d(
+            aprilTagList[0] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vxMetersPerSecond * ballTimeInAir,
+            aprilTagList[1] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vyMetersPerSecond * ballTimeInAir, 
+            new Rotation2d(aprilTagList[3] * Math.PI / 180)
+        );
         SmartDashboard.putNumber("AlignReef/TargetTagID", tID);
+
         SmartDashboard.putNumberArray("AlignReef/AprilTagPose", new double[]{
             aprilTagPose.getX(), 
             aprilTagPose.getY(), 
-            aprilTagPose.getRotation().getDegrees()
+            0.0
         });
 
         // Create target pose
@@ -179,13 +196,19 @@ public class AimOntheMove extends Command {
             new Rotation2d(
                 // Angle between robot pose and april tag pose
                 Math.atan2(
-                    aprilTagPose.getY() - drivetrain.getState().Pose.getY(),
-                    aprilTagPose.getX() - drivetrain.getState().Pose.getX()
+                    aprilTagPoseAdjusted.getY() - drivetrain.getState().Pose.getY(),
+                    aprilTagPoseAdjusted.getX() - drivetrain.getState().Pose.getX()
                 ) 
             )
         );
-        SmartDashboard.putNumberArray("AlignReef/TargetPose", new double[]{
-            targetPose.getX(), targetPose.getY(), targetPose.getRotation().getDegrees()
+
+
+        
+        
+        SmartDashboard.putNumberArray("AlignReef/AprilTagPoseAdjusted", new double[]{
+            aprilTagPoseAdjusted.getX(), 
+            aprilTagPoseAdjusted.getY(), 
+            aprilTagPoseAdjusted.getRotation().getDegrees()
         });
 
         // Set PID setpoint for rotation
@@ -263,9 +286,9 @@ is     */
         
         // Apply velocities
         // Robot moves toward target and rotates simultaneously
-        drivetrain.setControl(driveRequest
-                .withVelocityX(xInputSupplier.get())
-                .withVelocityY(yInputSupplier.get())
+        drivetrain.setControl(driveRequest            // Slow down for shooting
+                .withVelocityX(xInputSupplier.get() * Constants.DrivetrainConstants.MAX_SPEED_MPS * 0.5)
+                .withVelocityY(yInputSupplier.get() * Constants.DrivetrainConstants.MAX_SPEED_MPS * 0.5)
                 .withRotationalRate(yawInputSupplier.get()));
     }
 
@@ -276,6 +299,7 @@ is     */
         SmartDashboard.putNumber("AlignReef/EndTime", timer.get());
         
         drivetrain.setControl(stop); //May or may not be needed
+        //robotContainer.MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
     }
     public double doLimelightStuff(){
         calculateTargetPose();
