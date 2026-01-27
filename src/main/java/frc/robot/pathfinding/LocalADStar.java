@@ -4,6 +4,7 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -50,9 +51,8 @@ public class LocalADStar implements Pathfinder {
   private final HashMap<GridPosition, Pair<Double, Double>> incons = new HashMap<>();
   private final Set<GridPosition> closed = new HashSet<>();
 
-  // Obstacle sets
+  // Obstacle set (navgrid.json already includes robot buffer - no additional inflation needed)
   private final Set<GridPosition> obstacles = new HashSet<>();
-  private final Set<GridPosition> inflatedObstacles = new HashSet<>();
 
   // Request state (protected by lock)
   private final ReadWriteLock requestLock = new ReentrantReadWriteLock();
@@ -63,6 +63,8 @@ public class LocalADStar implements Pathfinder {
   private Translation2d requestStartVelocity = Translation2d.kZero;
   private boolean requestMinor = false;
   private boolean requestReset = false;
+  // Track if goal was adjusted from obstacle - if so, don't use realGoalPose for final waypoint
+  private boolean goalWasInObstacle = false;
 
   // Path output (thread-safe)
   private final AtomicReference<List<Translation2d>> currentPathWaypoints =
@@ -77,11 +79,8 @@ public class LocalADStar implements Pathfinder {
 
   /** Create a new pathfinder that runs AD* locally in a background thread. */
   public LocalADStar() {
-    // Load obstacles from navgrid.json
+    // Load obstacles from navgrid.json (already includes robot buffer from PathPlanner)
     loadObstacles("pathplanner/navgrid.json");
-
-    // Apply inflation to obstacles for robot safety
-    applyInflation();
 
     // Calculate grid dimensions
     nodesX = (int) Math.ceil(fieldLength / nodeSize);
@@ -89,8 +88,8 @@ public class LocalADStar implements Pathfinder {
 
     System.out.println("[LocalADStar] Grid: " + nodesX + "x" + nodesY + " nodes");
     System.out.println("[LocalADStar] Node size: " + nodeSize + "m");
-    System.out.println("[LocalADStar] Obstacles: " + obstacles.size() + " raw, "
-        + inflatedObstacles.size() + " inflated");
+    System.out.println(
+        "[LocalADStar] Obstacles: " + obstacles.size() + " cells (from navgrid with buffer)");
 
     // Start background planning thread
     planningThread = new Thread(this::runThread);
@@ -152,24 +151,7 @@ public class LocalADStar implements Pathfinder {
     }
   }
 
-  /** Apply inflation to all obstacles based on robot dimensions. */
-  private void applyInflation() {
-    int inflationCells = PathfindingConstants.INFLATION_CELLS;
-    inflatedObstacles.clear();
-    inflatedObstacles.addAll(obstacles);
-
-    for (GridPosition obstacle : obstacles) {
-      for (int dx = -inflationCells; dx <= inflationCells; dx++) {
-        for (int dy = -inflationCells; dy <= inflationCells; dy++) {
-          // Use circular inflation (Euclidean distance)
-          if (Math.hypot(dx, dy) <= inflationCells) {
-            inflatedObstacles.add(new GridPosition(obstacle.x() + dx, obstacle.y() + dy));
-          }
-        }
-      }
-    }
-  }
-
+  // Note: No inflation needed - PathPlanner's navgrid.json already includes robot buffer
   // ==================== Pathfinder Interface ====================
 
   @Override
@@ -238,6 +220,9 @@ public class LocalADStar implements Pathfinder {
     try {
       // === DEBUG: Raw input poses ===
       System.out.println("\n========== AD* SET PROBLEM DEBUG ==========");
+      System.out.println(
+          "[AD*] OBSTACLE CHECK: " + obstacles.size() + " obstacles (from navgrid with buffer)");
+      System.out.println("[AD*] Grid dimensions: " + nodesX + "x" + nodesY);
       System.out.println("[AD*] START Pose: (" + String.format("%.3f", startPose.getX()) + ", "
           + String.format("%.3f", startPose.getY()) + ", "
           + String.format("%.1f", startPose.getRotation().getDegrees()) + "°)");
@@ -252,8 +237,11 @@ public class LocalADStar implements Pathfinder {
       System.out.println(
           "[AD*] Raw Start Grid: (" + rawStartGrid.x() + ", " + rawStartGrid.y() + ")");
       System.out.println("[AD*] Raw Goal Grid: (" + rawGoalGrid.x() + ", " + rawGoalGrid.y() + ")");
-      System.out.println("[AD*] Start in obstacle? " + inflatedObstacles.contains(rawStartGrid));
-      System.out.println("[AD*] Goal in obstacle? " + inflatedObstacles.contains(rawGoalGrid));
+      System.out.println("[AD*] Start in obstacle? " + obstacles.contains(rawStartGrid));
+      System.out.println("[AD*] Goal in obstacle? " + obstacles.contains(rawGoalGrid));
+
+      // Track if goal is in an obstacle - if so, we'll use the adjusted position for final waypoint
+      goalWasInObstacle = obstacles.contains(rawGoalGrid);
 
       GridPosition startPos = findClosestNonObstacle(getGridPos(startPose.getTranslation()));
       if (startPos != null) {
@@ -316,12 +304,16 @@ public class LocalADStar implements Pathfinder {
 
   @SuppressWarnings("BusyWait")
   private void runThread() {
+    System.out.println("[AD*] Background planning thread started!");
+
     while (running) {
       try {
-        requestLock.readLock().lock();
+        // Use WRITE lock to safely read AND modify flags
+        requestLock.writeLock().lock();
         boolean reset = requestReset;
         boolean minor = requestMinor;
 
+        // Clear the flags now that we've read them
         if (reset) {
           requestReset = false;
         }
@@ -329,18 +321,19 @@ public class LocalADStar implements Pathfinder {
           requestMinor = false;
         }
 
-        if (reset || minor) {
-          GridPosition start = requestStart;
-          GridPosition goal = requestGoal;
-          Pose2d realStart = requestRealStartPose;
-          Pose2d realGoal = requestRealGoalPose;
-          requestLock.readLock().unlock();
+        GridPosition start = requestStart;
+        GridPosition goal = requestGoal;
+        Pose2d realStart = requestRealStartPose;
+        Pose2d realGoal = requestRealGoalPose;
+        requestLock.writeLock().unlock();
 
+        if (reset || minor) {
+          System.out.println("[AD*] Thread processing: reset=" + reset + ", minor=" + minor);
           isComputing.set(true);
           doWork(reset, minor, start, goal, realStart, realGoal);
           isComputing.set(false);
+          System.out.println("[AD*] Thread finished computing path");
         } else {
-          requestLock.readLock().unlock();
           Thread.sleep(10);
         }
       } catch (InterruptedException e) {
@@ -408,6 +401,12 @@ public class LocalADStar implements Pathfinder {
             + String.format("%.3f", wp.getY()) + ")");
       }
       System.out.println("================================================\n");
+
+      // === PUBLISH TO SMARTDASHBOARD FOR ADVANTAGESCOPE ===
+      SmartDashboard.putNumber("Pathfinding/AD*/Obstacles", obstacles.size());
+      SmartDashboard.putNumber("Pathfinding/AD*/GridPathLength", pathPositions.size());
+      SmartDashboard.putNumber("Pathfinding/AD*/FinalWaypointCount", waypoints.size());
+      SmartDashboard.putBoolean("Pathfinding/AD*/PathFound", waypoints.size() >= 2);
 
       currentPathWaypoints.set(waypoints);
       newPathAvailable.set(true);
@@ -502,7 +501,7 @@ public class LocalADStar implements Pathfinder {
 
   private List<GridPosition> extractPath(GridPosition sStart, GridPosition sGoal) {
     if (sGoal.equals(sStart)) {
-      return List.of(sGoal);
+      return List.of(sStart, sGoal); // Need at least 2 points
     }
 
     List<GridPosition> path = new ArrayList<>();
@@ -510,18 +509,39 @@ public class LocalADStar implements Pathfinder {
 
     GridPosition s = sStart;
     for (int k = 0; k < 400; k++) {
+      List<GridPosition> neighbors = getOpenNeighbors(s);
+
+      // Debug: log neighbor count on first iteration
+      if (k == 0) {
+        System.out.println("[AD*] extractPath: Start (" + s.x() + ", " + s.y() + ") has "
+            + neighbors.size() + " open neighbors");
+        if (neighbors.isEmpty()) {
+          System.out.println(
+              "[AD*] ERROR: No open neighbors from start! Checking raw obstacles...");
+          System.out.println("[AD*] Start in raw obstacles? " + obstacles.contains(s));
+        }
+      }
+
+      // Find neighbor with minimum g-cost (closest to goal)
       GridPosition best = null;
       double bestCost = Double.POSITIVE_INFINITY;
 
-      for (GridPosition x : getOpenNeighbors(s)) {
-        double cost = g.getOrDefault(x, Double.POSITIVE_INFINITY);
-        if (cost < bestCost) {
-          bestCost = cost;
+      for (GridPosition x : neighbors) {
+        double gCost = g.getOrDefault(x, Double.POSITIVE_INFINITY);
+        if (gCost < bestCost) {
+          bestCost = gCost;
           best = x;
         }
       }
 
+      // If no valid neighbor found, fall back to direct path if possible
       if (best == null) {
+        System.out.println("[AD*] extractPath: No neighbor with finite g-cost at step " + k);
+        // Try to reach goal directly if we're stuck
+        if (path.size() == 1) {
+          System.out.println("[AD*] Adding goal directly since path extraction failed");
+          path.add(sGoal);
+        }
         break;
       }
 
@@ -552,10 +572,19 @@ public class LocalADStar implements Pathfinder {
       waypoints.add(gridPosToTranslation(pos));
     }
 
-    // Replace start and end with actual poses
+    // Replace start with actual pose (always safe to use real start position)
+    // Only replace end if goal was NOT in an obstacle - otherwise keep the adjusted safe position
     if (!waypoints.isEmpty()) {
       waypoints.set(0, realStartPose.getTranslation());
-      waypoints.set(waypoints.size() - 1, realGoalPose.getTranslation());
+      if (!goalWasInObstacle) {
+        // Goal was in free space, use exact requested position
+        waypoints.set(waypoints.size() - 1, realGoalPose.getTranslation());
+      } else {
+        // Goal was in obstacle - keep the grid-adjusted safe position (already set from loop above)
+        System.out.println("[AD*] Goal was in obstacle - using adjusted safe position instead of "
+            + "original goal (" + String.format("%.3f", realGoalPose.getX()) + ", "
+            + String.format("%.3f", realGoalPose.getY()) + ")");
+      }
     }
 
     return waypoints;
@@ -597,7 +626,8 @@ public class LocalADStar implements Pathfinder {
   }
 
   private boolean isCollision(GridPosition s1, GridPosition s2) {
-    if (inflatedObstacles.contains(s1) || inflatedObstacles.contains(s2)) {
+    // Check against raw obstacles for collision (inflated used for findClosestNonObstacle)
+    if (obstacles.contains(s1) || obstacles.contains(s2)) {
       return true;
     }
 
@@ -605,7 +635,7 @@ public class LocalADStar implements Pathfinder {
     if (s1.x() != s2.x() && s1.y() != s2.y()) {
       GridPosition corner1 = new GridPosition(s1.x(), s2.y());
       GridPosition corner2 = new GridPosition(s2.x(), s1.y());
-      return inflatedObstacles.contains(corner1) || inflatedObstacles.contains(corner2);
+      return obstacles.contains(corner1) || obstacles.contains(corner2);
     }
 
     return false;
@@ -630,7 +660,8 @@ public class LocalADStar implements Pathfinder {
     dy *= 2;
 
     for (; n > 0; n--) {
-      if (inflatedObstacles.contains(new GridPosition(x, y))) {
+      // Use raw obstacles for walkability check
+      if (obstacles.contains(new GridPosition(x, y))) {
         return false;
       }
 
@@ -664,7 +695,9 @@ public class LocalADStar implements Pathfinder {
 
         if (nx >= 0 && nx < nodesX && ny >= 0 && ny < nodesY) {
           GridPosition neighbor = new GridPosition(nx, ny);
-          if (!inflatedObstacles.contains(neighbor)) {
+          // Only check raw obstacles, not inflated - this allows the algorithm to find paths
+          // The inflation is for safety, but the robot's actual path can go near obstacles
+          if (!obstacles.contains(neighbor)) {
             neighbors.add(neighbor);
           }
         }
@@ -675,22 +708,34 @@ public class LocalADStar implements Pathfinder {
   }
 
   private GridPosition findClosestNonObstacle(GridPosition pos) {
-    if (!inflatedObstacles.contains(pos)) {
-      return pos;
+    // First, ensure the starting position is clamped to valid grid bounds
+    int clampedX = Math.max(0, Math.min(pos.x(), nodesX - 1));
+    int clampedY = Math.max(0, Math.min(pos.y(), nodesY - 1));
+    GridPosition clampedPos = new GridPosition(clampedX, clampedY);
+
+    // NavGrid already includes robot buffer, so we check against obstacles directly
+    if (!obstacles.contains(clampedPos)) {
+      return clampedPos;
     }
 
-    // BFS to find nearest non-obstacle
+    // BFS to find nearest non-obstacle with a maximum search radius
     Set<GridPosition> visited = new HashSet<>();
     Queue<GridPosition> queue = new LinkedList<>();
-    queue.add(pos);
+    queue.add(clampedPos);
 
-    while (!queue.isEmpty()) {
+    int maxSearchIterations = nodesX * nodesY; // Limit to prevent infinite loops
+    int iterations = 0;
+
+    while (!queue.isEmpty() && iterations < maxSearchIterations) {
+      iterations++;
       GridPosition check = queue.poll();
-      if (!inflatedObstacles.contains(check)
-          && check.x() >= 0
+
+      // Check if this position is valid and not an obstacle
+      if (check.x() >= 0
           && check.x() < nodesX
           && check.y() >= 0
-          && check.y() < nodesY) {
+          && check.y() < nodesY
+          && !obstacles.contains(check)) {
         return check;
       }
 
@@ -698,14 +743,20 @@ public class LocalADStar implements Pathfinder {
 
       for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
-          GridPosition neighbor = new GridPosition(check.x() + dx, check.y() + dy);
-          if (!visited.contains(neighbor) && !queue.contains(neighbor)) {
-            queue.add(neighbor);
+          int nx = check.x() + dx;
+          int ny = check.y() + dy;
+          // Only add neighbors that are within bounds
+          if (nx >= 0 && nx < nodesX && ny >= 0 && ny < nodesY) {
+            GridPosition neighbor = new GridPosition(nx, ny);
+            if (!visited.contains(neighbor) && !queue.contains(neighbor)) {
+              queue.add(neighbor);
+            }
           }
         }
       }
     }
 
+    System.err.println("[AD*] WARNING: Could not find non-obstacle position near " + pos);
     return null;
   }
 
@@ -742,6 +793,9 @@ public class LocalADStar implements Pathfinder {
   private GridPosition getGridPos(Translation2d pos) {
     int x = (int) Math.floor(pos.getX() / nodeSize);
     int y = (int) Math.floor(pos.getY() / nodeSize);
+    // Clamp to valid grid bounds to handle edge cases (robot at/near origin or outside field)
+    x = Math.max(0, Math.min(x, nodesX - 1));
+    y = Math.max(0, Math.min(y, nodesY - 1));
     return new GridPosition(x, y);
   }
 

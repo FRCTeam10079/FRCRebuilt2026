@@ -9,6 +9,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -53,6 +54,14 @@ public class PathfindToTagCommand extends Command {
   private final StructPublisher<Pose2d> goalPosePublisher;
   private final StructPublisher<Pose2d> targetWaypointPublisher;
   private final StructArrayPublisher<Pose2d> pathPublisher;
+
+  // Field2d for visualization in AdvantageScope / Shuffleboard
+  private static final Field2d pathfindingField = new Field2d();
+
+  static {
+    // Publish Field2d once so AdvantageScope can see it
+    SmartDashboard.putData("Pathfinding/Field", pathfindingField);
+  }
 
   // Pure pursuit parameters
   private static final double LOOKAHEAD_DISTANCE = 0.5; // meters
@@ -186,15 +195,25 @@ public class PathfindToTagCommand extends Command {
       }
     }
 
-    // If no path yet, wait
+    // If no path yet, wait (but NEVER drive directly - that would ignore obstacles!)
     if (!hasPath) {
       SmartDashboard.putString("Pathfinding/Status", "Waiting for path...");
       SmartDashboard.putNumber("Pathfinding/WaitTime", pathWaitTimer.get());
 
-      // Timeout - just try to drive directly
-      if (pathWaitTimer.hasElapsed(1.0)) {
-        System.out.println("[PathfindToTag] Path timeout, driving directly to goal");
-        driveTowardsPose(currentPose, targetPose);
+      // Keep publishing current pose even while waiting - VERY IMPORTANT for visibility!
+      currentPosePublisher.set(currentPose);
+      goalPosePublisher.set(targetPose);
+
+      // Also publish to Field2d while waiting
+      pathfindingField.setRobotPose(currentPose);
+      pathfindingField.getObject("Goal").setPose(targetPose);
+      pathfindingField.getObject("TargetWaypoint").setPose(targetPose); // No waypoint yet
+      pathfindingField.getObject("Path").setPoses(); // Empty path
+
+      // If waiting too long, log a warning but DON'T drive directly (that ignores obstacles)
+      if (pathWaitTimer.hasElapsed(2.0) && shouldLogDebug) {
+        System.out.println("[PathfindToTag] WARNING: Still waiting for path after "
+            + String.format("%.1f", pathWaitTimer.get()) + "s");
       }
       return;
     }
@@ -264,20 +283,46 @@ public class PathfindToTagCommand extends Command {
     goalPosePublisher.set(targetPose);
     targetWaypointPublisher.set(new Pose2d(targetWaypoint, targetPose.getRotation()));
 
+    // === FIELD2D VISUALIZATION (works with AdvantageScope/Shuffleboard) ===
+    // Update robot pose on field
+    pathfindingField.setRobotPose(currentPose);
+    // Goal pose shown as a separate object
+    pathfindingField.getObject("Goal").setPose(targetPose);
+    // Target waypoint shown as another object
+    pathfindingField
+        .getObject("TargetWaypoint")
+        .setPose(new Pose2d(targetWaypoint, targetPose.getRotation()));
+    // Full path trajectory
+    if (currentPath != null && !currentPath.isEmpty()) {
+      Pose2d[] pathPoses = new Pose2d[currentPath.size()];
+      for (int i = 0; i < currentPath.size(); i++) {
+        pathPoses[i] = new Pose2d(currentPath.get(i), targetPose.getRotation());
+      }
+      pathfindingField.getObject("Path").setPoses(pathPoses);
+    } else {
+      pathfindingField.getObject("Path").setPoses();
+    }
+
     // Publish velocity data to SmartDashboard
     SmartDashboard.putNumber("Pathfinding/VelX", xVelocity);
     SmartDashboard.putNumber("Pathfinding/VelY", yVelocity);
     SmartDashboard.putNumber("Pathfinding/VelOmega", rotationVelocity);
     SmartDashboard.putNumber("Pathfinding/ErrorX", targetWaypoint.getX() - currentPose.getX());
     SmartDashboard.putNumber("Pathfinding/ErrorY", targetWaypoint.getY() - currentPose.getY());
+    SmartDashboard.putNumber("Pathfinding/CurrentWaypointIdx", currentWaypointIndex);
+    SmartDashboard.putNumber(
+        "Pathfinding/PathLength", currentPath != null ? currentPath.size() : 0);
 
-    // Publish path for visualization
+    // Publish path for raw struct visualization too
     if (currentPath != null && !currentPath.isEmpty()) {
       Pose2d[] pathPoses = new Pose2d[currentPath.size()];
       for (int i = 0; i < currentPath.size(); i++) {
         pathPoses[i] = new Pose2d(currentPath.get(i), targetPose.getRotation());
       }
       pathPublisher.set(pathPoses);
+    } else {
+      // Publish empty array when no path to clear stale data
+      pathPublisher.set(new Pose2d[0]);
     }
 
     drivetrain.setControl(
