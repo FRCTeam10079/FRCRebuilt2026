@@ -6,15 +6,15 @@ import frc.robot.Constants.IntakeConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
-    private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, "canivore");
+  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, "canivore");
 
-    public IntakeSubsystem() {}
+  public IntakeSubsystem() {}
 
-    public void intakeIn() {
-        intakeMotor.set(IntakeConstants.INTAKE_SPEED);
-    }
+  public void intakeIn() {
+    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
+  }
 
-    public void stop() {
-        intakeMotor.stopMotor();
-    }
+  public void stop() {
+    intakeMotor.stopMotor();
+  }
 }
