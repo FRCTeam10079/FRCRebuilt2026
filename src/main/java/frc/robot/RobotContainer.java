@@ -9,8 +9,10 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
+import frc.robot.commands.RunIndexer;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
 
@@ -33,6 +35,8 @@ public class RobotContainer {
 
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
+  // Indexer
+  private final IndexerSubsystem indexer = new IndexerSubsystem();
 
   public final IntakeSubsystem intake = new IntakeSubsystem();
 
@@ -79,6 +83,19 @@ public class RobotContainer {
     // Y button - Reset Heading
     m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
+    // Right Trigger - Run Indexer Forward (Intake/Feed)
+
+    m_driverController
+        .rightTrigger(0.5)
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+
+    // B Button - Run Indexer Reverse (Unjam)
+
+    m_driverController
+        .b()
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController
