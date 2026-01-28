@@ -1,384 +1,338 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
 package frc.robot.commands;
-
-import static edu.wpi.first.units.Units.MetersPerSecond;
-
-import java.lang.Math;
-import java.util.function.Supplier;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.Constants.*;
-import frc.robot.LimelightHelpers;
-import frc.robot.RobotContainer;
-import frc.robot.generated.TunerConstants;
+import frc.robot.RobotStateMachine;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
+// Gotta make a move to a town that's right for meeeee
+/**
+ * Command to align the robot to an AprilTag using vision
+ *
+ * <p>This command: 1. Finds the closest AprilTag (or uses Limelight-detected tag) 2. Calculates target position with
+ * optional offset (LEFT/RIGHT/CENTER) 3. Uses PID control to drive the robot to the target pose 4. Rotates to face
+ * opposite the tag (facing the tag)
+ *
+ * <p>For REBUILT 2026 - Generic AprilTag alignment for any field element
+ */
+public class AimOnTheMove extends Command {
 
+    // Subsystems
+    private final CommandSwerveDrivetrain drivetrain;
+    private final LimelightSubsystem limelight;
+    private final RobotStateMachine stateMachine;
 
-// TODO: Clean this file up.
-public class AimOntheMove extends Command {
+    // Timer for logging/timeout
+    private final Timer timer = new Timer();
 
-    // Subsystems from RobotContainer
-    private LimelightSubsystem limelight;
-    private CommandSwerveDrivetrain drivetrain;
-    private RobotContainer robotContainer;
+    // PID Controllers for position control
+    private final PIDController pidX;
+    private final PIDController pidY;
+    private final PIDController pidRotate;
 
-    Timer timer = new Timer();
-    
-    /* ----- VELOCITY ----- */
-    // TUNE: Increase for faster alignment, decrease for better control
-    private final double maxVelocity = 6.0;  // Max translation speed (m/s)
-    // TUNE: Increase for faster rotation, decrease if spinning too fast
-    private final double maxAngularVelocity = 12;
-    
-    private Supplier<Double> xInputSupplier;
-    private Supplier<Double> yInputSupplier;
-    private Supplier<Double> yawInputSupplier;
-    
-    
-    // Max rotation speed (rad/s)
+    // Swerve drive request - field centric with velocity control
+    private final SwerveRequest.FieldCentric driveRequest =
+            new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.Velocity);
 
-    /* ----- PIDs ----- */
-    // TUNE: Increase kP for faster approach, decrease if overshooting
-    private PIDController pidDistance = new PIDController(0, 0, 0);  // Translation: Increase P for more aggressive, decrease for smoother
-    // TUNE: Increase kP for faster rotation, decrease if rotation is jerky
-    private PIDController pidRotate = new PIDController(12, 0, 0
-    );    // Rotation: Increase P for faster snap, decrease for smooth turn
+    // Stop request
+    private final SwerveRequest stop;
 
-    // Creates a swerve request that specifies the robot to move FieldCentric
-    private final SwerveRequest.FieldCentric driveRequest = new SwerveRequest.FieldCentric()
-    .withDriveRequestType(DriveRequestType.Velocity); // Uses ClosedLoopVoltage for PID
-    // Creates a swerve request to stop all motion by setting velocities and rotational rate to 0
-    SwerveRequest stop = driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0);
-
-    // The Desired position to go to
+    // Target pose to align to
     private Pose2d targetPose;
 
-    /* ----- FRICTION COMPENSATION ----- */
-    // TUNE: Increase if robot stops short of target, decrease if overshooting
-    private final double frictionConstant = 0.00;  // Friction compensation: Increase if stopping too early, decrease if overshooting
+    // Configuration from Constants
+    private final double speed;
+    private final double rotationSpeed;
+    private final double positionTolerance;
+    private final double yawTolerance;
 
-    /* ----- TOLERANCES ----- */
-    private final double positionTolerance = 0.25;  // Position tolerance (m)
-    private final double yawTolerance = Math.PI / 32;  // Rotation tolerance (~5.6°)
+    // Offset configuration
+    private double xInput;
+    private double yInput;
 
-    // Distance threshold for friction compensation
-    private final double frictionDistanceThreshold = Units.inchesToMeters(0.5);
+    // Target AprilTag info
+    private int targetTagID;
+    private boolean tagDetected = false;
 
-    /* ----- VISION CORRECTION ----- */
-    // TUNE: Set to false if vision updates cause jerking
-    private final boolean useVisionCorrection = true;  // Enable/disable vision updates: false if jerky
-    // TUNE: Increase if vision updates too frequent, decrease for more corrections
-    private final double visionUpdateInterval = 0.1;  // Vision update rate (seconds)
-    private double lastVisionUpdateTime = 0;
-    private final int minTagCountForVisionUpdate = 1;  // Minimum tags needed: We only have one limelight
+    // Store initial tag to prevent switching during alignment
+    private Integer storedTagID = null;
 
-    // Targetted Tag ID
-    private int tID;
-    // Indicates if tag was detected
-    private boolean tagDetected;
+    /**
+     * Creates a new AlignToAprilTag command
+     *
+     * @param drivetrain The swerve drivetrain subsystem
+     * @param limelight The limelight vision subsystem
+     * @param alignPosition LEFT, RIGHT, or CENTER offset from the AprilTag
+     */
+    public AimOnTheMove(
+            CommandSwerveDrivetrain drivetrain, LimelightSubsystem limelight, double xInput, double yInput) {
+        this.drivetrain = drivetrain;
+        this.limelight = limelight;
+        this.stateMachine = RobotStateMachine.getInstance();
 
-    private boolean isSimulation = RobotBase.isSimulation();
+        // Get constants
+        this.speed = DrivetrainConstants.ALIGN_SPEED_MPS;
+        this.rotationSpeed = DrivetrainConstants.ALIGN_ROTATION_SPEED;
+        this.positionTolerance = DrivetrainConstants.POSITION_TOLERANCE_METERS;
+        this.yawTolerance = DrivetrainConstants.YAW_TOLERANCE_RADIANS;
+        this.xInput = xInput;
+        this.yInput = yInput;
 
-    // CONSTRUCTOR
-    public AimOntheMove(RobotContainer robotContainer, Supplier<Double> xInputSupplier,Supplier<Double> yInputSupplier) {
-        this.robotContainer = robotContainer;
-        this.drivetrain = robotContainer.drivetrain;
-        this.limelight = robotContainer.limelight;
-        this.xInputSupplier = xInputSupplier;
-        this.yInputSupplier = yInputSupplier;
-        this.yawInputSupplier = () -> doLimelightStuff();
-        // -180 and 180 degrees are the same point, so its continuous
+        // Initialize PID controllers with values from Constants
+        pidX = new PIDController(
+                DrivetrainConstants.ALIGN_PID_KP, DrivetrainConstants.ALIGN_PID_KI, DrivetrainConstants.ALIGN_PID_KD);
+        pidY = new PIDController(
+                DrivetrainConstants.ALIGN_PID_KP, DrivetrainConstants.ALIGN_PID_KI, DrivetrainConstants.ALIGN_PID_KD);
+        pidRotate = new PIDController(DrivetrainConstants.ALIGN_ROTATION_KP, 0, DrivetrainConstants.ALIGN_ROTATION_KD);
+
+        // Enable continuous input for rotation (-PI to PI are same point)
         pidRotate.enableContinuousInput(-Math.PI, Math.PI);
+
+        // Create stop request
+        stop = driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0);
+
+        // This command requires the drivetrain
+        addRequirements(drivetrain);
 
     }
 
     @Override
-    public void initialize(){
-        // Starts timer
+    public void initialize() {
+        // Start timer
         timer.restart();
-        lastVisionUpdateTime = 0;
-        
-        SmartDashboard.putBoolean("AlignReef/CommandStarted", true);
-        SmartDashboard.putNumber("AlignReef/StartTime", timer.get());
 
-        // Get the tag ID from the Limelight
-        if (!limelight.isTagDetected() && !isSimulation) {
+        // Set state machine to vision tracking mode
+        stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.VISION_TRACKING);
+        stateMachine.setAlignedToTarget(false);
+
+        // Reset stored tag
+        storedTagID = null;
+
+        // Get current robot pose
+        Pose2d robotPose = drivetrain.getState().Pose;
+        if (robotPose == null) {
+            System.out.println("[AlignToAprilTag] ERROR: Robot pose is null!");
             tagDetected = false;
-            SmartDashboard.putBoolean("AlignReef/TagDetected", false);
-            System.out.println("Error: No AprilTag detected by Limelight.");
-            SmartDashboard.putString("AlignReef/Error", "No AprilTag detected");
             return;
         }
 
-        tID = limelight.getTid();
-        SmartDashboard.putNumber("AlignReef/DetectedTagID", tID);
+        // Find the closest AprilTag using odometry
+        double minDistance = Double.MAX_VALUE;
+        targetTagID = -1;
 
-        // Calculate target pose based on the detected tag
-        if (!calculateTargetPose()) {
-            tagDetected = false;
-            SmartDashboard.putBoolean("AlignReef/TagDetected", false);
-            return;
-        }
+        for (int id : AprilTagMaps.aprilTagMap.keySet()) {
+            double[] tagData = AprilTagMaps.aprilTagMap.get(id);
+            Pose2d tagPose = new Pose2d(
+                    tagData[0] * Constants.INCHES_TO_METERS,
+                    tagData[1] * Constants.INCHES_TO_METERS,
+                    new Rotation2d(Math.toRadians(tagData[3])));
 
-        tagDetected = true;
-        SmartDashboard.putBoolean("AlignReef/TagDetected", true);
-
-        // Sets Robot Max Speed for Alignment - Might wanna change it
-        // this feels wrong lmfao
-        //robotContainer.MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) * 1.0;
-    }
-
-    /**
-     * Calculate the target pose based on AprilTag position and offsets
-     * @return true if successful, false otherwise
-     */
-    private boolean calculateTargetPose() {
-        double[] aprilTagList = Constants.AprilTagMaps.aprilTagMap.get(tID);
-        // Checks if the tag exists within the list of all tags
-        if (aprilTagList == null) {
-            if(!isSimulation){
-                System.out.println("Error: Target pose array is null for Tag ID: " + tID);
-                SmartDashboard.putString("AlignReef/Error", "Target pose array null for Tag " + tID);
-                return false;
-            } 
-            else {
-                int fakeTagKey = 7;
-                // Use the position of april tag with key 3 (relative to the robot)
-                aprilTagList = new double[] {
-                    AprilTagMaps.aprilTagMap.get(fakeTagKey)[0] - drivetrain.getState().Pose.getX(), // X
-                    AprilTagMaps.aprilTagMap.get(fakeTagKey)[1] - drivetrain.getState().Pose.getY(), // Y
-                    AprilTagMaps.aprilTagMap.get(fakeTagKey)[2],                                     // Z (not important)
-                    AprilTagMaps.aprilTagMap.get(fakeTagKey)[3] - drivetrain.getState().Pose.getRotation().getDegrees(), // pitch
-                    AprilTagMaps.aprilTagMap.get(fakeTagKey)[4]  // yaw
-                };
+            double distance = calculateDistance(robotPose, tagPose);
+            if (distance < minDistance) {
+                minDistance = distance;
+                targetTagID = id;
             }
         }
 
-        Pose2d aprilTagPose = new Pose2d(
-            aprilTagList[0] * Constants.INCHES_TO_METERS,
-            aprilTagList[1] * Constants.INCHES_TO_METERS, 
-            new Rotation2d(aprilTagList[3] * Math.PI / 180)
-        );
-        double pivotAngle = Math.PI/4; // Too lazy to actually grab the value for now TODO: read off of the pivot
-        double ballExitSpeed = 5; // meters per second, I'm making up values here.
-
-        double distanceToHub = Math.sqrt( Math.pow((drivetrain.getState().Pose.getX() - aprilTagPose.getX()), 2) + Math.pow((drivetrain.getState().Pose.getY() - aprilTagPose.getY()), 2));
-        double ballTimeInAir = distanceToHub / Math.cos(pivotAngle) * ballExitSpeed; 
-
-        Pose2d aprilTagPoseAdjusted = new Pose2d(
-            aprilTagList[0] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vxMetersPerSecond * ballTimeInAir,
-            aprilTagList[1] * Constants.INCHES_TO_METERS - drivetrain.getState().Speeds.vyMetersPerSecond * ballTimeInAir, 
-            new Rotation2d(aprilTagList[3] * Math.PI / 180)
-        );
-        SmartDashboard.putNumber("AlignReef/TargetTagID", tID);
-
-        SmartDashboard.putNumberArray("AlignReef/AprilTagPose", new double[]{
-            aprilTagPose.getX(), 
-            aprilTagPose.getY(), 
-            0.0
-        });
-
-        // Create target pose
-        targetPose = new Pose2d(
-            0,
-            0,
-            new Rotation2d(
-                // Angle between robot pose and april tag pose
-                Math.atan2(
-                    aprilTagPoseAdjusted.getY() - drivetrain.getState().Pose.getY(),
-                    aprilTagPoseAdjusted.getX() - drivetrain.getState().Pose.getX()
-                ) 
-            )
-        );
-
-
-        
-        
-        SmartDashboard.putNumberArray("AlignReef/AprilTagPoseAdjusted", new double[]{
-            aprilTagPoseAdjusted.getX(), 
-            aprilTagPoseAdjusted.getY(), 
-            aprilTagPoseAdjusted.getRotation().getDegrees()
-        });
-
-        // Set PID setpoint for rotation
-        pidRotate.setSetpoint(targetPose.getRotation().getRadians());
-        // Note: Distance PID setpoint is always 0 (we want distance to target = 0)
-
-        return true;
-    }
-
-    /**
-     * Update robot pose using vision if a valid tag is seen.
-     * This continuously corrects odometry drift during alignment.
-is     */
-    private void updatePoseFromVision() {
-        if (!useVisionCorrection) {
+        // Check if a tag was found
+        if (targetTagID == -1) {
+            System.out.println("[AlignToAprilTag] ERROR: No AprilTag found in map!");
+            tagDetected = false;
             return;
         }
 
-        double currentTime = timer.get();
-        if (currentTime - lastVisionUpdateTime < visionUpdateInterval) {
-            return;
-        }
+        System.out.println("[AlignToAprilTag] Closest tag from odometry: " + targetTagID);
 
-        // Check if we see the target tag
-        if (!limelight.isTagDetected()) {
-            SmartDashboard.putString("AlignReef/VisionUpdate", "No tag detected");
-            return;
-        }
-
-        int currentTagID = limelight.getTid();
-        
-        // Only use vision update if we see our target tag
-        if (currentTagID != tID) {
-            SmartDashboard.putString("AlignReef/VisionUpdate", "Wrong tag: " + currentTagID);
-            return;
-        }
-
-        // Get tag count to verify quality
-        double tagCount = limelight.getTagCount();
-        if (tagCount < minTagCountForVisionUpdate) {
-            SmartDashboard.putString("AlignReef/VisionUpdate", "Insufficient tag count");
-            return;
-        }
-
-        // Get the vision-based pose estimate
-        var llMeasurement = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
-        
-        if (llMeasurement != null && llMeasurement.tagCount > 0) {
-            // Reset translation only (not rotation) to avoid jerky movements
-            // This corrects position drift while keeping rotation smooth
-            Pose2d visionPose = llMeasurement.pose;
-            Pose2d currentPose = drivetrain.getState().Pose;
-            
-            // Create a new pose with vision translation but current rotation
-            Pose2d correctedPose = new Pose2d(
-                visionPose.getTranslation(),
-                currentPose.getRotation()
-            );
-            
-            // Reset the drivetrain's pose estimate
-            drivetrain.resetPose(correctedPose);
-            
-            lastVisionUpdateTime = currentTime;
-            SmartDashboard.putString("AlignReef/VisionUpdate", "Success");
-            SmartDashboard.putNumberArray("AlignReef/VisionPose", new double[]{
-                correctedPose.getX(), correctedPose.getY(), correctedPose.getRotation().getDegrees()
-            });
+        // Check if Limelight sees a valid tag - prefer it over odometry
+        int limelightTagID = limelight.getTid();
+        if (limelightTagID != 0 && AprilTagMaps.aprilTagMap.containsKey(limelightTagID)) {
+            targetTagID = limelightTagID;
+            System.out.println("[AlignToAprilTag] Using Limelight tag: " + targetTagID);
+        } else if (limelightTagID == 0) {
+            System.out.println("[AlignToAprilTag] Limelight has no target, using odometry closest tag: " + targetTagID);
         } else {
-            SmartDashboard.putString("AlignReef/VisionUpdate", "Invalid measurement");
+            System.out.println("[AlignToAprilTag] Limelight tag " + limelightTagID + " not in map, using odometry: "
+                    + targetTagID);
         }
+
+        // Store the tag ID to prevent switching mid-alignment
+        storedTagID = targetTagID;
+
+        // Get tag data
+        double[] tagData = AprilTagMaps.aprilTagMap.get(targetTagID);
+        if (tagData == null) {
+            System.out.println("[AlignToAprilTag] ERROR: Tag data is null for ID: " + targetTagID);
+            tagDetected = false;
+            return;
+        }
+
+        // Convert tag position to Pose2d
+        Pose2d aprilTagPose = new Pose2d(
+                tagData[0] * Constants.INCHES_TO_METERS,
+                tagData[1] * Constants.INCHES_TO_METERS,
+                new Rotation2d(Math.toRadians(tagData[3])));
+
+        tagDetected = true;
+
+        // Calculate offset based on alignment position
+        // Offsets are relative to the tag's coordinate frame
+
+        // Target rotation is opposite the tag (facing the tag)
+        double targetRotation = aprilTagPose.getRotation().getRadians() - Math.PI;
+        targetRotation = MathUtil.angleModulus(targetRotation);
+
+        // Rotate the offset from tag-relative to field-relative
+        //double rotatedOffsetX = (offsetX * Math.cos(targetRotation)) - (offsetY * Math.sin(targetRotation));
+        //double rotatedOffsetY = (offsetX * Math.sin(targetRotation)) + (offsetY * Math.cos(targetRotation));
+
+        // Calculate final target pose
+        targetPose = new Pose2d(
+                robotPose.getX(),
+                robotPose.getY(),
+                new Rotation2d(targetRotation));
+
+        // Set PID setpoints
+        pidX.setSetpoint(targetPose.getX());
+        pidY.setSetpoint(targetPose.getY());
+        pidRotate.setSetpoint(targetPose.getRotation().getRadians());
+
+        System.out.println("[AlignToAprilTag] Target Pose: X=" + targetPose.getX() + ", Y="
+                + targetPose.getY() + ", Yaw="
+                + Math.toDegrees(targetPose.getRotation().getRadians()) + "°");
+
+        // Log to SmartDashboard
+        SmartDashboard.putNumber("AlignToAprilTag/TargetTagID", targetTagID);
+        SmartDashboard.putNumber("AlignToAprilTag/TargetX", targetPose.getX());
+        SmartDashboard.putNumber("AlignToAprilTag/TargetY", targetPose.getY());
+        SmartDashboard.putNumber(
+                "AlignToAprilTag/TargetYaw", targetPose.getRotation().getDegrees());
     }
 
     @Override
     public void execute() {
-        
-        // Apply velocities
-        // Robot moves toward target and rotates simultaneously
-        drivetrain.setControl(driveRequest            // Slow down for shooting
-                .withVelocityX(xInputSupplier.get() * Constants.DrivetrainConstants.MAX_SPEED_MPS * 0.5)
-                .withVelocityY(yInputSupplier.get() * Constants.DrivetrainConstants.MAX_SPEED_MPS * 0.5)
-                .withRotationalRate(yawInputSupplier.get()));
-    }
-
-    @Override
-    public void end(boolean interrupted) {
-        SmartDashboard.putBoolean("AlignReef/CommandEnded", true);
-        SmartDashboard.putBoolean("AlignReef/Interrupted", interrupted);
-        SmartDashboard.putNumber("AlignReef/EndTime", timer.get());
-        
-        drivetrain.setControl(stop); //May or may not be needed
-        //robotContainer.MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
-    }
-    public double doLimelightStuff(){
-        calculateTargetPose();
+        // If no tag detected, don't execute
         if (!tagDetected) {
-            SmartDashboard.putBoolean("AlignReef/ExecuteSkipped", true);
-            //drivetrain.setControl(stop); // May or may not be needed
-            return 0;
+            return;
         }
 
-        // Update pose from vision (corrects odometry drift)
-        updatePoseFromVision();
-
-        // Get current pose
+        // Get current robot pose
         Pose2d currentPose = drivetrain.getState().Pose;
-        SmartDashboard.putNumberArray("AlignReef/CurrentPose", new double[]{
-            currentPose.getX(), currentPose.getY(), currentPose.getRotation().getDegrees()
-        });
-        SmartDashboard.putNumber("AlignReef/ExecuteTime", timer.get());
-
-        // Calculate the direct path (distance and direction) to target
-        Translation2d translationToTarget = targetPose.getTranslation().minus(currentPose.getTranslation());
-        double linearDistance = translationToTarget.getNorm();  // How far away
-        Rotation2d directionOfTravel = translationToTarget.getAngle();  // Which direction
-
-        // Apply friction compensation when close to prevent overshoot
-        double frictionComp = 0.0;
-        if (linearDistance >= frictionDistanceThreshold) {
-            frictionComp = frictionConstant * maxVelocity;
+        if (currentPose == null) {
+            return;
         }
 
-        // Calculate velocity magnitude using PID - uses distance error where setpoint is 0 (at target)
-        // PID outputs higher velocity when far away, lower velocity when close
-        double velocityMagnitude = pidDistance.calculate(0, linearDistance);
-        velocityMagnitude = Math.min(Math.abs(velocityMagnitude) + frictionComp, maxVelocity);
+        // Calculate velocities using PID
+        double[] velocities = calculatePIDVelocities(currentPose);
 
-        // Decompose velocity into x and y components based on direction to target
-        double velocityX = velocityMagnitude * directionOfTravel.getCos();
-        double velocityY = velocityMagnitude * directionOfTravel.getSin();
+        // Log data
+        SmartDashboard.putNumber("AlignToAprilTag/CurrentX", currentPose.getX());
+        SmartDashboard.putNumber("AlignToAprilTag/CurrentY", currentPose.getY());
+        SmartDashboard.putNumber(
+                "AlignToAprilTag/CurrentYaw", currentPose.getRotation().getDegrees());
+        SmartDashboard.putNumber("AlignToAprilTag/ErrorX", pidX.getError());
+        SmartDashboard.putNumber("AlignToAprilTag/ErrorY", pidY.getError());
+        SmartDashboard.putNumber("AlignToAprilTag/ErrorYaw", Math.toDegrees(pidRotate.getError()));
 
-        // Calculate rotational velocity (happens simultaneously with translation)
+        // Check if we need to flip direction based on alliance side
+        // Red side tags (6-11) may need direction adjustment
+        boolean isRedSide = Constants.contains(new int[] {6, 7, 8, 9, 10, 11}, targetTagID);
+
+        // Apply velocities to drivetrain
+        drivetrain.setControl(
+            drivetrain.driveFieldCentricSmoothRequest(
+                xInput, yInput, rotationSpeed, 
+                Constants.DrivetrainConstants.MAX_SPEED_MPS,
+                Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC)
+        );
+    }
+    
+    /** Calculate velocities using PID control */
+    private double[] calculatePIDVelocities(Pose2d currentPose) {
+        // Calculate X velocity
+        double velocityX = pidX.calculate(currentPose.getX());
+        velocityX = MathUtil.clamp(velocityX, -speed, speed);
+
+        // Calculate Y velocity
+        double velocityY = pidY.calculate(currentPose.getY());
+        velocityY = MathUtil.clamp(velocityY, -speed, speed);
+
+        // Calculate rotation velocity
         double velocityYaw = pidRotate.calculate(currentPose.getRotation().getRadians());
-        velocityYaw = MathUtil.clamp(velocityYaw, -maxAngularVelocity, maxAngularVelocity);
+        velocityYaw = MathUtil.clamp(velocityYaw, -2.0, 2.0);
 
-        // SmartDashboard for logging
-        SmartDashboard.putNumber("AlignReef/LinearDistance", linearDistance);
-        SmartDashboard.putNumber("AlignReef/DirectionOfTravel", directionOfTravel.getDegrees());
-        SmartDashboard.putNumber("AlignReef/VelocityMagnitude", velocityMagnitude);
-        double yawErrorDegrees = Math.toDegrees(MathUtil.angleModulus(pidRotate.getSetpoint() - currentPose.getRotation().getRadians()));
-        SmartDashboard.putNumber("AlignReef/YawError", yawErrorDegrees);
-        SmartDashboard.putNumber("AlignReef/VelocityX", velocityX);
-        SmartDashboard.putNumber("AlignReef/VelocityY", velocityY);
-        SmartDashboard.putNumber("AlignReef/VelocityYaw", velocityYaw);
-        SmartDashboard.putNumber("AlignReef/FrictionComp", frictionComp);
-        SmartDashboard.putNumber("AlignReef/CurrentTagID", limelight.getTid());
+        return new double[] {velocityX, velocityY, velocityYaw};
+    }
 
-        return velocityYaw;
-
+    /** Calculate distance between two poses */
+    private double calculateDistance(Pose2d pose1, Pose2d pose2) {
+        double dx = pose1.getX() - pose2.getX();
+        double dy = pose1.getY() - pose2.getY();
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     @Override
     public boolean isFinished() {
+        // End if no tag detected
         if (!tagDetected) {
             return true;
         }
 
+        // Get current pose
         Pose2d currentPose = drivetrain.getState().Pose;
-        Translation2d translationToTarget = targetPose.getTranslation().minus(currentPose.getTranslation());
-        double linearDistance = translationToTarget.getNorm();
-        double yawError = Math.abs(MathUtil.angleModulus(
-                targetPose.getRotation().getRadians() - currentPose.getRotation().getRadians()));
+        if (currentPose == null || targetPose == null) {
+            return true;
+        }
 
-        boolean atPosition = linearDistance < positionTolerance;
-        boolean atRotation = yawError < yawTolerance;
+        // Calculate position and yaw error
+        double distance = targetPose.getTranslation().getDistance(currentPose.getTranslation());
+        double yawError =
+                Math.abs(MathUtil.angleModulus(targetPose.getRotation().getRadians()
+                        - currentPose.getRotation().getRadians()));
 
-        SmartDashboard.putBoolean("AlignReef/AtPosition", atPosition);
-        SmartDashboard.putBoolean("AlignReef/AtRotation", atRotation);
+        // Check if within tolerance
+        boolean positionReached = distance <= positionTolerance;
+        boolean yawReached = yawError <= yawTolerance;
 
-        return atPosition && atRotation;
+        SmartDashboard.putNumber("AlignToAprilTag/Distance", distance);
+        SmartDashboard.putBoolean("AlignToAprilTag/PositionReached", positionReached);
+        SmartDashboard.putBoolean("AlignToAprilTag/YawReached", yawReached);
+
+        return positionReached && yawReached;
+    }
+
+    @Override
+    public void end(boolean interrupted) {
+        // Stop the drivetrain
+        drivetrain.setControl(stop);
+
+        // Return to field-centric drive mode
+        stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.FIELD_CENTRIC);
+
+        // Set alignment status based on completion
+        if (!interrupted && tagDetected) {
+            stateMachine.setAlignedToTarget(true);
+            System.out.println("[AlignToAprilTag] Completed successfully - aligned to tag " + targetTagID);
+        } else {
+            stateMachine.setAlignedToTarget(false);
+            System.out.println(
+                    "[AlignToAprilTag] " + (interrupted ? "Interrupted" : "Failed") + " - alignment not confirmed");
+        }
+
+        // Log completion
+        SmartDashboard.putBoolean("AlignToAprilTag/Completed", !interrupted);
+        SmartDashboard.putNumber("AlignToAprilTag/Duration", timer.get());
     }
 }
