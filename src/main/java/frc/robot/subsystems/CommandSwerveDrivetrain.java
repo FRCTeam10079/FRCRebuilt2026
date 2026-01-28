@@ -385,7 +385,31 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Apply to drivetrain using OpenLoopVoltage for responsive feel
         setControl(m_fieldCentricRequest.withSpeeds(compensatedSpeeds));
     }
+    public SwerveRequest driveFieldCentricSmoothRequest(
+            double xInput, double yInput, double rotationInput, double maxVelocity, double maxAngularVelocity) {
 
+        // Apply deadband to eliminate joystick drift
+        double xMagnitude = MathUtil.applyDeadband(xInput, CONTROLLER_DEADBAND);
+        double yMagnitude = MathUtil.applyDeadband(yInput, CONTROLLER_DEADBAND);
+        double angularMagnitude = MathUtil.applyDeadband(rotationInput, CONTROLLER_DEADBAND);
+
+        // Square the angular magnitude for finer low-speed control
+        // while maintaining direction (sign)
+        angularMagnitude = Math.copySign(angularMagnitude * angularMagnitude, angularMagnitude);
+
+        // Calculate velocities (flip for alliance if needed)
+        // Apply velocity coefficients for runtime speed adjustment (slow mode, etc.)
+        boolean isBlueAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
+        double xVelocity = (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * teleopVelocityCoefficient;
+        double yVelocity = (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * teleopVelocityCoefficient;
+        double angularVelocity = -angularMagnitude * maxAngularVelocity * rotationVelocityCoefficient;
+
+        // Apply skew compensation for smooth combined translation/rotation
+        ChassisSpeeds compensatedSpeeds = calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
+
+        // Apply to drivetrain using OpenLoopVoltage for responsive feel
+        return m_fieldCentricRequest.withSpeeds(compensatedSpeeds);
+    }
     /**
      * Set the translation velocity coefficient for teleop driving. Use this for slow mode, scoring mode, etc.
      *

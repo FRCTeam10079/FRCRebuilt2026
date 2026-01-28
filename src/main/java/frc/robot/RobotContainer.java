@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.AlignPosition;
+import frc.robot.commands.AimOnTheMove;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -67,7 +68,7 @@ public class RobotContainer {
         m_driverController.a().whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.CENTER));
 
         // Left Bumper - Align to AprilTag (LEFT position)
-        m_driverController.leftBumper().whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.LEFT));
+        m_driverController.leftBumper().whileTrue(new AimOnTheMove(drivetrain, limelight, m_driverController.getLeftY(), m_driverController.getLeftX()));
 
         // Right Bumper - Align to AprilTag (RIGHT position)
         m_driverController.rightBumper().whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT));
@@ -125,6 +126,35 @@ public class RobotContainer {
         return m_stateMachine;
     }
 
+    /**
+     * Calculates shooter angle based on distance and shooter speed.
+     *
+     * @param distanceToHub Distance to the center of the hub.
+     * @param hubHeight NOT the actual hub height. Height difference from where the balls come out to the top of the hub.
+     * @param shootingSpeed Meters per second. NOT RPM!!
+     */
+
+    public double calcShooterAngle(double distanceToHub, double hubHeight, double shootingSpeed){
+        double gravity = -9.81;
+
+        double v = shootingSpeed;
+
+        double g = gravity;
+
+        double d_hub = distanceToHub;
+
+        double h_hub = hubHeight; // Not actually hub height. Height difference from ball shooting height to top of hub.
+
+        double root = v*v*v*v - g * ( (g * d_hub * d_hub) - (2.0 * h_hub * v * v) );
+
+        double frac_top = (v * v) + Math.sqrt(root);
+
+        double frac_bottom = g * d_hub;
+
+        double angle = -Math.atan(frac_top / frac_bottom);
+
+        return angle;
+    }
     /**
      * Returns the autonomous command to run during autonomous period TODO: Implement autonomous routines using
      * PathPlanner
