@@ -6,6 +6,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
@@ -116,6 +117,9 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
+    m_driverController
+        .x()
+        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
