@@ -24,6 +24,10 @@ spotless {
     target "**/*.json"
     gson().indentWithSpaces(2)
   }
+  yaml {
+    target "**/*.yaml", "**/*.yml"
+    jackson()
+  }
   flexmark {
     target "**/*.md"
     flexmark()
