@@ -1,17 +1,58 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
-
+  // Initialize motors and encoder
   private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, "canivore");
+  private final TalonFX pivotMotor = new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, "canivore");
+  private final CANcoder pivotEncoder = new CANcoder(IntakeConstants.PIVOT_ENCODER_ID, "canivore");
+  // Current pivot setpoint
+  private double pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
 
-  public IntakeSubsystem() {}
+  public IntakeSubsystem() {
+    configurePivotMotor();
+    configureIntakeMotor();
+  }
 
+  // Motor configurations (empty for now, can tune later)
+  private void configurePivotMotor() {
+    // Add PID, current limits, soft limits,
+  }
+
+  private void configureIntakeMotor() {
+    // Add current limits, neutral mode,
+  }
+
+  // Pivot commands
+  public void deployPivot() {
+    pivotSetpoint = IntakeConstants.PIVOT_INTAKE_POSITION;
+  }
+
+  public void stowPivot() {
+    pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
+  }
+
+  // Check if pivot is deployed
+  public boolean isDeployed() {
+    // Check if pivot is actually at the intake position
+    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION) < 0.05;
+  }
+
+  // Get pivot encoder position
+  public double getPivotPosition() {
+    return pivotEncoder.getPosition().getValueAsDouble();
+  }
+
+  // Intake motor commands
   public void intakeIn() {
-    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
+    // Only spin intake if pivot is deployed
+    if (isDeployed()) {
+      intakeMotor.set(IntakeConstants.INTAKE_SPEED);
+    }
   }
 
   public void stop() {
