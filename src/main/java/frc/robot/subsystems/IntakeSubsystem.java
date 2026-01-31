@@ -2,14 +2,19 @@ package frc.robot.subsystems;
 
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
+import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
   // Initialize motors and encoder
-  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, "canivore");
-  private final TalonFX pivotMotor = new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, "canivore");
-  private final CANcoder pivotEncoder = new CANcoder(IntakeConstants.PIVOT_ENCODER_ID, "canivore");
+  private final TalonFX intakeMotor =
+      new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, TunerConstants.kCANBus);
+  private final TalonFX pivotMotor =
+      new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
+  private final CANcoder pivotEncoder =
+      new CANcoder(IntakeConstants.PIVOT_ENCODER_ID, TunerConstants.kCANBus);
   // Current pivot setpoint
   private double pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
 
@@ -20,10 +25,12 @@ public class IntakeSubsystem extends SubsystemBase {
 
   // Motor configurations (empty for now, can tune later)
   private void configurePivotMotor() {
+    pivotMotor.setNeutralMode(NeutralModeValue.Brake); // Pivot should hold position
     // Add PID, current limits, soft limits,
   }
 
   private void configureIntakeMotor() {
+    intakeMotor.setNeutralMode(NeutralModeValue.Coast); // Intake can spin freely
     // Add current limits, neutral mode,
   }
 
