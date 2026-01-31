@@ -18,7 +18,7 @@ import frc.robot.Constants.*;
 import frc.robot.RobotStateMachine;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.LimelightSubsystem;
-// Gotta make a move to a town that's right for meeeee
+
 /**
  * Command to align the robot to an AprilTag using vision
  *
