@@ -3,6 +3,7 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
+import frc.robot.generated.TunerConstants;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IndexerConstants;
@@ -13,9 +14,8 @@ public class IndexerSubsystem extends SubsystemBase {
   // private final TalonFX spindexerMotor; // Follower commented out to see if it helps with issues
 
   public IndexerSubsystem() {
-    String kCANbus = "canivore"; 
-
-    feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, kCANbus);
+  // Use the generated CANBus instance instead of the deprecated String-based constructor
+  feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
     // spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus); // Commented out to see if it helps with issues
 
     TalonFXConfiguration config = new TalonFXConfiguration();
