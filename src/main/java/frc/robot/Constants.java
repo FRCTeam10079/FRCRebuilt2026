@@ -97,6 +97,17 @@ public final class Constants {
     public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
     public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
     public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
+
+    public static final double KA = 0;
+    public static final double KS = 0;
+    public static final double KG = 0;
+    public static final double KP = 0;
+    public static final double KI = 0;
+    public static final double KD = 0;
+    public static final double KV = 0;
+
+    public static final int SUPPLY_CURRENT_LIMIT = 40;
+
   }
 
   /** Shooter constants (placeholder) */
