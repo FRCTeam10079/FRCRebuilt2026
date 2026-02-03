@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -110,16 +111,90 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       new SysIdRoutine.Mechanism(
           volts -> setControl(m_steerCharacterization.withVolts(volts)), null, this));
 
+  // ==================== VISION LOCALIZATION WITH MEGATAG2 ====================
+  /**
+   * Updates robot pose estimation using Limelight MegaTag2 vision measurements. This method: 1.
+   * Sets robot orientation for MegaTag2 (required before reading pose) 2. Reads MegaTag2 pose
+   * estimate 3. Validates the pose (field bounds, tag count, angular velocity) 4. Calculates
+   * dynamic standard deviations based on distance and tag count 5. Adds the measurement to the pose
+   * estimator
+   */
   private void updateVision() {
-    LimelightHelpers.PoseEstimate x = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-    if (x == null) {
+    var driveState = getState();
+    double headingDeg = driveState.Pose.getRotation().getDegrees();
+    double angularVelocityDegPerSec = Math.toDegrees(driveState.Speeds.omegaRadiansPerSecond);
+
+    // Set robot orientation BEFORE reading MegaTag2 pose
+    // This is required for MegaTag2 to work correctly
+    LimelightHelpers.SetRobotOrientation(
+        frc.robot.Constants.VisionConstants.LIMELIGHT_NAME,
+        headingDeg,
+        angularVelocityDegPerSec,
+        0,
+        0,
+        0,
+        0);
+
+    // Get MegaTag2 pose estimate (uses robot orientation for better single-tag accuracy)
+    LimelightHelpers.PoseEstimate mt2Estimate =
+        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(
+            frc.robot.Constants.VisionConstants.LIMELIGHT_NAME);
+
+    // Validate measurement exists
+    if (mt2Estimate == null) {
       return;
     }
-    Logger.recordOutput("Vision", x.pose);
-    if (x.tagCount != 0) {
-      // Note: fpgaToCurrentTime conversion is handled in the addVisionMeasurement override
-      addVisionMeasurement(x.pose, x.timestampSeconds);
+
+    // Log vision data for debugging
+    SmartDashboard.putString("Vision/Pose", mt2Estimate.pose.toString());
+    SmartDashboard.putNumber("Vision/TagCount", mt2Estimate.tagCount);
+    SmartDashboard.putNumber("Vision/AvgTagDist", mt2Estimate.avgTagDist);
+    SmartDashboard.putNumber("Vision/Timestamp", mt2Estimate.timestampSeconds);
+
+    // Reject if no tags detected
+    if (mt2Estimate.tagCount == 0) {
+      return;
     }
+
+    // Reject if robot is spinning too fast (MegaTag2 degrades with high angular velocity)
+    if (Math.abs(angularVelocityDegPerSec)
+        > frc.robot.Constants.VisionConstants.MAX_ANGULAR_VELOCITY_DEG_PER_SEC) {
+      SmartDashboard.putString("Vision/Rejected", "AngularVelocityTooHigh");
+      return;
+    }
+
+    // Reject if pose is outside field boundaries
+    double x = mt2Estimate.pose.getX();
+    double y = mt2Estimate.pose.getY();
+    double margin = frc.robot.Constants.VisionConstants.FIELD_BORDER_MARGIN;
+    if (x < -margin
+        || x > frc.robot.Constants.VisionConstants.FIELD_LENGTH_METERS + margin
+        || y < -margin
+        || y > frc.robot.Constants.VisionConstants.FIELD_WIDTH_METERS + margin) {
+      SmartDashboard.putString("Vision/Rejected", "OutOfFieldBounds");
+      return;
+    }
+
+    // Calculate dynamic standard deviations based on distance and tag count
+    // Formula from Team 6328: stdDev = coefficient * (avgDist^1.2) / (tagCount^2)
+    double avgTagDist = mt2Estimate.avgTagDist;
+    int tagCount = mt2Estimate.tagCount;
+
+    double xyStdDev = frc.robot.Constants.VisionConstants.XY_STD_DEV_COEFFICIENT
+        * Math.pow(avgTagDist, 1.2)
+        / Math.pow(tagCount, 2.0);
+
+    // MegaTag2 doesn't provide reliable heading, so use very high theta std dev
+    double thetaStdDev = Double.POSITIVE_INFINITY;
+
+    // Create standard deviation matrix and add vision measurement
+    Matrix<N3, N1> visionStdDevs =
+        edu.wpi.first.math.VecBuilder.fill(xyStdDev, xyStdDev, thetaStdDev);
+
+    SmartDashboard.putNumber("Vision/XYStdDev", xyStdDev);
+    SmartDashboard.putBoolean("Vision/Accepted", true);
+
+    addVisionMeasurement(mt2Estimate.pose, mt2Estimate.timestampSeconds, visionStdDevs);
   }
 
   /*

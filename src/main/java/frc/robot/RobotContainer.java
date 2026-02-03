@@ -117,13 +117,9 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController.x().toggleOnTrue(
-    new StartEndCommand(
-        () -> intake.intakeIn(),
-        () -> intake.stop(),
-        intake
-    )
-);
+    m_driverController
+        .x()
+        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
