@@ -57,8 +57,7 @@
     "javax.smartcardio.*",
     "edu.wpi.first.math.proto.*",
     "edu.wpi.first.math.**.proto.*",
-    "edu.wpi.first.math.**.struct.*",
-    null
+    "edu.wpi.first.math.**.struct.*"
   ],
   "java.format.settings.profile": "GoogleStyle",
   "java.dependency.enableDependencyCheckup": false,
