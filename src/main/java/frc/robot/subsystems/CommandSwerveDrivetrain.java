@@ -111,14 +111,35 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
           volts -> setControl(m_steerCharacterization.withVolts(volts)), null, this));
 
   private void updateVision() {
-    LimelightHelpers.PoseEstimate x = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight");
-    if (x == null) {
+    // Get current drivetrain state for orientation and angular velocity
+    var driveState = getState();
+    double headingDeg = driveState.Pose.getRotation().getDegrees();
+
+    // Calculate rotational velocity in rotations per second
+    double omegaRps =
+        edu.wpi.first.math.util.Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
+
+    // Set robot orientation BEFORE getting MegaTag2 pose estimate
+    // This allows MegaTag2 to use gyro data for better localization
+    LimelightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
+
+    // Use MegaTag2 for better single-tag accuracy with gyro fusion
+    LimelightHelpers.PoseEstimate llMeasurement =
+        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+
+    if (llMeasurement == null) {
       return;
     }
-    Logger.recordOutput("Vision", x.pose);
-    if (x.tagCount != 0) {
+
+    Logger.recordOutput("Vision", llMeasurement.pose);
+    Logger.recordOutput("Vision/TagCount", llMeasurement.tagCount);
+
+    // Only add measurement if:
+    // 1. We see at least one tag
+    // 2. Robot is not spinning too fast (MegaTag2 less accurate during rapid rotation)
+    if (llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
       // Note: fpgaToCurrentTime conversion is handled in the addVisionMeasurement override
-      addVisionMeasurement(x.pose, x.timestampSeconds);
+      addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
     }
   }
 
