@@ -21,7 +21,7 @@ public class NetworkedDouble {
 
   private NetworkTableListener doubleListener;
 
-  // this value is read nad written to from multiple threads
+  // this value is read and written to from multiple threads
   private volatile boolean newData = false;
 
   /**
