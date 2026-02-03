@@ -70,7 +70,7 @@ public class NetworkedPID extends PIDController {
    * @throws IllegalArgumentException if period &lt;= 0
    */
   public NetworkedPID(double kp, double ki, double kd, double period, String name) {
-    super(kp, ki, kd);
+    super(kp, ki, kd, period);
     instanceCount++;
 
     this.name = name;

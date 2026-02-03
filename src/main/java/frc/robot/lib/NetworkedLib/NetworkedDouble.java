@@ -19,20 +19,29 @@ public class NetworkedDouble {
   private DoublePublisher doublePublisher;
   private DoubleSubscriber doubleSubscriber;
 
-  private boolean newData = false;
+  private NetworkTableListener doubleListener;
 
-  public NetworkedDouble(String topicString, double defaultValue) {
+  // this value is read nad written to from multiple threads
+  private volatile boolean newData = false;
+
+  /**
+   * Creates a networkedDouble object
+   *
+   * @param topic_string the name of the topic
+   * @param default_value the default double value to set the topic to
+   */
+  public NetworkedDouble(String topic_string, double default_value) {
     NetworkTableInstance defaultNT = NetworkTableInstance.getDefault();
-    this.doubleTopic = defaultNT.getDoubleTopic(topicString);
+    this.doubleTopic = defaultNT.getDoubleTopic(topic_string);
 
     this.doublePublisher = doubleTopic.publish();
-    this.doubleSubscriber = doubleTopic.subscribe(defaultValue);
+    this.doubleSubscriber = doubleTopic.subscribe(default_value);
 
-    this.doublePublisher.set(defaultValue);
+    this.doublePublisher.set(default_value);
 
     // ONLY detects REMOTE value updates
     // not designed to detect local code changes
-    NetworkTableListener.createListener(
+    doubleListener = NetworkTableListener.createListener(
         doubleTopic, EnumSet.of(NetworkTableEvent.Kind.kValueRemote), (NetworkTableEvent event) -> {
           // legit just a lambda to make newData true
           // hopefully thread safe ♥
@@ -55,10 +64,15 @@ public class NetworkedDouble {
     return true;
   }
 
+  /** Closes active listeners */
+  public void close() {
+    doubleListener.close();
+  }
+
   /**
    * Sets the value via the publisher
    *
-   * @param value
+   * @param value the value to set
    */
   public void set(double value) {
     this.doublePublisher.set(value);
@@ -67,7 +81,7 @@ public class NetworkedDouble {
   /**
    * Gets the value from the subscriber
    *
-   * @return
+   * @return the value recieved from the subscriber
    */
   public double get() {
     return this.doubleSubscriber.get();
