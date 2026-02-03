@@ -28,13 +28,5 @@ public class IntakeCommand extends Command {
     return false;
   }
 
-  // Command to deploy pivot
-  public Command deployPivot() {
-    return Commands.runOnce(() -> intake.deployPivot(), intake);
-  }
-
-  // Command to stow pivot
-  public Command stowPivot() {
-    return Commands.runOnce(() -> intake.stowPivot(), intake);
-  }
+  
 }
