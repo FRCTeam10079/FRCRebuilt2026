@@ -1,6 +1,7 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.IntakeSubsystem;
 
 public class IntakeCommand extends Command {
@@ -25,5 +26,15 @@ public class IntakeCommand extends Command {
   @Override
   public boolean isFinished() {
     return false;
+  }
+
+  // Command to deploy pivot
+  public Command deployPivot() {
+    return Commands.runOnce(() -> intake.deployPivot(), intake);
+  }
+
+  // Command to stow pivot
+  public Command stowPivot() {
+    return Commands.runOnce(() -> intake.stowPivot(), intake);
   }
 }
