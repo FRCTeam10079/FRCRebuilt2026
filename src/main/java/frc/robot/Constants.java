@@ -173,6 +173,45 @@ public final class Constants {
     // Camera mounting (inches)
     public static final double CAMERA_HEIGHT_INCHES = 24.0; // Placeholder
     public static final double CAMERA_MOUNT_ANGLE_DEGREES = 30.0; // Placeholder
+
+    // ==================== MEGATAG2 VISION ESTIMATION CONSTANTS ====================
+    // Standard deviation coefficients for vision measurements
+    // These scale with distance and inversely with tag count
+    // Formula: stdDev = coefficient * (distance^1.2) / (tagCount^2.0)
+    public static final double XY_STD_DEV_COEFFICIENT = 0.01; // Base XY standard deviation
+    public static final double THETA_STD_DEV_COEFFICIENT =
+        0.03; // Base theta standard deviation (not used with MegaTag2)
+
+    // Maximum angular velocity for valid vision measurements (degrees/sec)
+    // MegaTag2 results degrade significantly when spinning fast
+    public static final double MAX_ANGULAR_VELOCITY_DEG_PER_SEC = 720.0; // 2 rotations/sec
+
+    // Field boundary margins for pose rejection (meters)
+    public static final double FIELD_BORDER_MARGIN = 0.5;
+    public static final double FIELD_LENGTH_METERS = 16.54;
+    public static final double FIELD_WIDTH_METERS = 8.07;
+
+    // Maximum Z error for valid poses (meters) - robot should be near the ground
+    public static final double MAX_Z_ERROR = 0.75;
+
+    // Ambiguity threshold for single-tag MegaTag1 (not used with MegaTag2)
+    public static final double MAX_AMBIGUITY = 0.3;
+
+    // ==================== LIMELIGHT 4 IMU MODES ====================
+    // Mode 0: EXTERNAL_ONLY - Uses external gyro via SetRobotOrientation
+    // Mode 1: EXTERNAL_SEED - Seeds internal IMU with external, uses external for botpose
+    // Mode 2: INTERNAL_ONLY - Uses LL4's internal IMU only
+    // Mode 3: INTERNAL_MT1_ASSIST - Internal IMU + MT1 vision yaw correction
+    // Mode 4: INTERNAL_EXTERNAL_ASSIST - Internal 1kHz IMU + external gyro drift correction
+    public static final int IMU_MODE_EXTERNAL_ONLY = 0;
+    public static final int IMU_MODE_SEED_EXTERNAL = 1;
+    public static final int IMU_MODE_INTERNAL_ONLY = 2;
+    public static final int IMU_MODE_INTERNAL_MT1_ASSIST = 3;
+    public static final int IMU_MODE_INTERNAL_EXTERNAL_ASSIST = 4;
+
+    // IMU assist alpha for complementary filter (modes 3 and 4)
+    public static final double IMU_ASSIST_ALPHA =
+        0.001; // Higher = faster convergence to assist source
   }
 
   public static final class IndexerConstants {
