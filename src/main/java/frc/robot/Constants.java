@@ -107,7 +107,6 @@ public final class Constants {
     public static final double KV = 0;
 
     public static final int SUPPLY_CURRENT_LIMIT = 40;
-
   }
 
   /** Shooter constants (placeholder) */

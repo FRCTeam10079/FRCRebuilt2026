@@ -41,11 +41,10 @@ public class RobotContainer {
   public final LimelightSubsystem limelight = new LimelightSubsystem();
   // Indexer
   private final IndexerSubsystem indexer = new IndexerSubsystem();
-  // Pivot 
+  // Pivot
   public final PivotSubsystem pivot = new PivotSubsystem();
   // Intake
   public final IntakeSubsystem intake = new IntakeSubsystem(pivot);
-
 
   private final Telemetry m_telemetry =
       new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
