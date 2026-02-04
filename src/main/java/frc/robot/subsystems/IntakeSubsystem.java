@@ -3,10 +3,12 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
+import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, "canivore");
+  private final TalonFX intakeMotor =
+      new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, TunerConstants.kCANBus);
 
   public IntakeSubsystem() {}
 
