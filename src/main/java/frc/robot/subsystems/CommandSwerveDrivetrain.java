@@ -205,6 +205,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     Matrix<N3, N1> visionStdDevs =
         edu.wpi.first.math.VecBuilder.fill(xyStdDev, xyStdDev, thetaStdDev);
 
+    // ==================== VERY IMPORTANT! TIMESTAMP FIX ====================
+    // The Limelight's timestampSeconds is in NetworkTables server time, NOT FPGA
+    // time.
+    // CTRE's SwerveDrivetrain expects FPGA timestamps for its pose buffer.
+    //
+    // Solution: Calculate the FPGA timestamp by taking the current FPGA time
+    // and subtracting the total latency reported by Limelight.
+    // This gives us the approximate FPGA time when the image was captured.
     double latencySeconds = mt2Estimate.latency / 1000.0; // Convert ms to seconds
     double fpgaTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - latencySeconds;
 
