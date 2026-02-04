@@ -41,7 +41,7 @@ public class RobotContainer {
   // Shooter
   private final ShooterSubsystem shooter = new ShooterSubsystem();
 
-  // Telemetry - publishes robot pose to Elastic dashboard
+// Telemetry - publishes robot pose to Elastic dashboard
   private final Telemetry logger = new Telemetry(Constants.DrivetrainConstants.MAX_SPEED_MPS);
 
   public RobotContainer() {
