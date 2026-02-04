@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -110,37 +111,119 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       new SysIdRoutine.Mechanism(
           volts -> setControl(m_steerCharacterization.withVolts(volts)), null, this));
 
+  // ==================== VISION LOCALIZATION WITH MEGATAG2 ====================
+  /**
+   * Updates robot pose estimation using Limelight MegaTag2 vision measurements. This method: 1.
+   * Sets robot orientation for MegaTag2 (required before reading pose) 2. Reads MegaTag2 pose
+   * estimate 3. Validates the pose (field bounds, tag count, angular velocity) 4. Calculates
+   * dynamic standard deviations based on distance and tag count 5. Adds the measurement to the pose
+   * estimator
+   */
   private void updateVision() {
-    // Get current drivetrain state for orientation and angular velocity
     var driveState = getState();
     double headingDeg = driveState.Pose.getRotation().getDegrees();
+    double angularVelocityDegPerSec = Math.toDegrees(driveState.Speeds.omegaRadiansPerSecond);
 
-    // Calculate rotational velocity in rotations per second
-    double omegaRps =
-        edu.wpi.first.math.util.Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
+    // Log that vision update is running
+    SmartDashboard.putNumber("Vision/HeadingDeg", headingDeg);
 
-    // Set robot orientation BEFORE getting MegaTag2 pose estimate
-    // This allows MegaTag2 to use gyro data for better localization
-    LimelightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
+    // Set robot orientation BEFORE reading MegaTag2 pose
+    // This is required for MegaTag2 to work correctly
+    LimelightHelpers.SetRobotOrientation(
+        frc.robot.Constants.VisionConstants.LIMELIGHT_NAME,
+        headingDeg,
+        angularVelocityDegPerSec,
+        0,
+        0,
+        0,
+        0);
 
-    // Use MegaTag2 for better single-tag accuracy with gyro fusion
-    LimelightHelpers.PoseEstimate llMeasurement =
-        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+    // Get MegaTag2 pose estimate (uses robot orientation for better single-tag
+    // accuracy)
+    LimelightHelpers.PoseEstimate mt2Estimate =
+        LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(
+            frc.robot.Constants.VisionConstants.LIMELIGHT_NAME);
 
-    if (llMeasurement == null) {
+    // Validate measurement exists
+    if (mt2Estimate == null) {
+      SmartDashboard.putString("Vision/Status", "NULL_ESTIMATE");
       return;
     }
 
-    Logger.recordOutput("Vision", llMeasurement.pose);
-    Logger.recordOutput("Vision/TagCount", llMeasurement.tagCount);
-
-    // Only add measurement if:
-    // 1. We see at least one tag
-    // 2. Robot is not spinning too fast (MegaTag2 less accurate during rapid rotation)
-    if (llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
-      // Note: fpgaToCurrentTime conversion is handled in the addVisionMeasurement override
-      addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
+    // Check for stale/default timestamp (timestamp = 0 means no valid data)
+    if (mt2Estimate.timestampSeconds == 0) {
+      SmartDashboard.putString("Vision/Status", "STALE_TIMESTAMP");
+      return;
     }
+
+    // Log vision data for debugging
+    SmartDashboard.putString("Vision/Pose", mt2Estimate.pose.toString());
+    SmartDashboard.putNumber("Vision/TagCount", mt2Estimate.tagCount);
+    SmartDashboard.putNumber("Vision/AvgTagDist", mt2Estimate.avgTagDist);
+    SmartDashboard.putNumber("Vision/LimelightTimestamp", mt2Estimate.timestampSeconds);
+    SmartDashboard.putNumber("Vision/Latency", mt2Estimate.latency);
+
+    // Reject if no tags detected
+    if (mt2Estimate.tagCount == 0) {
+      SmartDashboard.putString("Vision/Status", "NO_TAGS");
+      return;
+    }
+
+    // Reject if robot is spinning too fast (MegaTag2 degrades with high angular
+    // velocity)
+    if (Math.abs(angularVelocityDegPerSec)
+        > frc.robot.Constants.VisionConstants.MAX_ANGULAR_VELOCITY_DEG_PER_SEC) {
+      SmartDashboard.putString("Vision/Status", "ANGULAR_VEL_TOO_HIGH");
+      return;
+    }
+
+    // Reject if pose is outside field boundaries
+    double x = mt2Estimate.pose.getX();
+    double y = mt2Estimate.pose.getY();
+    double margin = frc.robot.Constants.VisionConstants.FIELD_BORDER_MARGIN;
+    if (x < -margin
+        || x > frc.robot.Constants.VisionConstants.FIELD_LENGTH_METERS + margin
+        || y < -margin
+        || y > frc.robot.Constants.VisionConstants.FIELD_WIDTH_METERS + margin) {
+      SmartDashboard.putString("Vision/Status", "OUT_OF_BOUNDS");
+      return;
+    }
+
+    // Calculate dynamic standard deviations based on distance and tag count
+    // Formula from Team 6328: stdDev = coefficient * (avgDist^1.2) / (tagCount^2)
+    double avgTagDist = mt2Estimate.avgTagDist;
+    int tagCount = mt2Estimate.tagCount;
+
+    double xyStdDev = frc.robot.Constants.VisionConstants.XY_STD_DEV_COEFFICIENT
+        * Math.pow(avgTagDist, 1.2)
+        / Math.pow(tagCount, 2.0);
+
+    // MegaTag2 doesn't provide reliable heading, so use very high theta std dev
+    double thetaStdDev = Double.POSITIVE_INFINITY;
+
+    // Create standard deviation matrix
+    Matrix<N3, N1> visionStdDevs =
+        edu.wpi.first.math.VecBuilder.fill(xyStdDev, xyStdDev, thetaStdDev);
+
+    // ==================== VERY IMPORTANT! TIMESTAMP FIX ====================
+    // The Limelight's timestampSeconds is in NetworkTables server time, NOT FPGA
+    // time.
+    // CTRE's SwerveDrivetrain expects FPGA timestamps for its pose buffer.
+    //
+    // Solution: Calculate the FPGA timestamp by taking the current FPGA time
+    // and subtracting the total latency reported by Limelight.
+    // This gives us the approximate FPGA time when the image was captured.
+    double latencySeconds = mt2Estimate.latency / 1000.0; // Convert ms to seconds
+    double fpgaTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - latencySeconds;
+
+    SmartDashboard.putNumber("Vision/XYStdDev", xyStdDev);
+    SmartDashboard.putNumber("Vision/FPGATimestamp", fpgaTimestamp);
+    SmartDashboard.putString("Vision/Status", "ACCEPTED");
+
+    // Call the instance method (this.) which uses our overridden version
+    // The override applies Utils.fpgaToCurrentTime() to convert FPGA time to CTRE
+    // time
+    this.addVisionMeasurement(mt2Estimate.pose, fpgaTimestamp, visionStdDevs);
   }
 
   /*
