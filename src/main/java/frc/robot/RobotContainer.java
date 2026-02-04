@@ -4,20 +4,18 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
+import frc.robot.commands.AutoShoot;
 import frc.robot.commands.RunIndexer;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
-import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
@@ -40,17 +38,15 @@ public class RobotContainer {
   public final LimelightSubsystem limelight = new LimelightSubsystem();
   // Indexer
   private final IndexerSubsystem indexer = new IndexerSubsystem();
+  // Shooter
+  private final ShooterSubsystem shooter = new ShooterSubsystem();
 
-  public final IntakeSubsystem intake = new IntakeSubsystem();
-
-  private final Telemetry m_telemetry =
-      new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
+  // Telemetry - publishes robot pose to Elastic dashboard
+  private final Telemetry logger = new Telemetry(Constants.DrivetrainConstants.MAX_SPEED_MPS);
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
-
-    drivetrain.registerTelemetry(m_telemetry::telemeterize);
 
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
@@ -64,6 +60,10 @@ public class RobotContainer {
    * buttons to commands
    */
   private void configureBindings() {
+    // Register telemetry to publish robot pose to NetworkTables for Elastic
+    // dashboard
+    drivetrain.registerTelemetry(logger::telemeterize);
+
     // ==================== DRIVER CONTROLS ====================
     drivetrain.setDefaultCommand(drivetrain.smoothTeleopDriveCommand(
         () -> m_driverController.getLeftY(), // Forward/backward
@@ -91,19 +91,29 @@ public class RobotContainer {
     // Y button - Reset Heading
     m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
-    // Right Trigger - Run Indexer Forward (Intake/Feed)
+    // ==================== SHOOTING CONTROLS ====================
 
+    // X Button - Auto-Range and Spin Up Shooter
+    // While held: Calculates distance, sets RPM, spins motor.
+    // Release: Stops shooter.
+    m_driverController
+        .x()
+        .whileTrue(new AutoShoot(
+            shooter, limelight)); // X button(might conflict with other buttons so be aware)
+
+    // Right Trigger - Run Indexer Forward (Intake/Feed)
+    // NOTE: Driver holds X to spin up, then pulls Trigger to fire!
     m_driverController
         .rightTrigger(0.5)
         .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
             .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
 
     // B Button - Run Indexer Reverse (Unjam)
-
     m_driverController
         .b()
         .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
             .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController
@@ -121,23 +131,6 @@ public class RobotContainer {
               drivetrain.setRotationVelocityCoefficient(
                   Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
             }));
-
-    // ==================== OPERATOR CONTROLS ====================
-    // TODO: Add intake controls
-    m_driverController
-        .x()
-        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
-    // TODO: Add shooter controls
-    // TODO: Add climb controls
-
-    // ==================== STATE MACHINE EXAMPLES ====================
-    // Example: Manual state transitions (add your actual bindings)
-    // m_driverController.y().onTrue(Commands.runOnce(() ->
-    // m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
-
-    // Example: Hub shift state can be set based on FMS data or operator input
-    // m_operatorController.start().onTrue(Commands.runOnce(() ->
-    // m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
   }
 
   /** Get the driver controller for use in commands/subsystems */

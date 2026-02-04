@@ -33,6 +33,9 @@ public final class Constants {
 
     // Height restriction during climb (inches)
     public static final double MAX_HEIGHT_DURING_CLIMB = 30.0;
+
+    // Field length
+    public static final double FIELD_LENGTH = 16.48; // Field length in meters
   }
 
   /** Controller port assignments */
@@ -91,26 +94,58 @@ public final class Constants {
 
   /** Intake constants (placeholder) */
   public static final class IntakeConstants {
-    public static final double INTAKE_SPEED = -0.5;
-    public static final int INTAKE_MOTOR_ID = 19; // TODO: Make real
+    public static final double INTAKE_SPEED = 0.8;
+    public static final double OUTTAKE_SPEED = -0.5;
+    public static final int INTAKE_MOTOR_ID = 0; // TODO: Make real
     public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
     public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
     public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
     public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
   }
 
-  /** Shooter constants (placeholder) */
+  /** Shooter constants */
   public static final class ShooterConstants {
-    // Target RPM values (will vary based on distance)
+    // ==================== BASIC CONSTANTS ====================
     public static final double SHOOTER_IDLE_RPM = 0;
     public static final double SHOOTER_SPINUP_RPM = 3000;
-    public static final double SHOOTER_MAX_RPM = 5000;
-
-    // RPM tolerance for "at setpoint" check
+    public static final double SHOOTER_MAX_RPM =
+        6000; // Increased slightly for long range(orginal was 5000)
     public static final double SHOOTER_RPM_TOLERANCE = 100;
-
-    // Feeder speed when firing
     public static final double FEEDER_SPEED = 1.0;
+
+    // Motor CAN IDs (Placeholder values - replace with actual IDs)
+    public static final int MASTER_MOTOR_ID = 30; // Placeholder ID
+    public static final int SLAVE_MOTOR_ID = 31; // Placeholder ID
+
+    // PID Constants (Tune these!)
+    public static final double SHOOTER_KS = 0.1; // Volts to overcome friction
+    public static final double SHOOTER_KV = 0.12; // Volts per RPS
+    public static final double SHOOTER_KP = 0.5; // Feedback gain
+
+    // Auto ranging constants
+    // Physical measurements (Used for Distance Calculation)
+    public static final double CAMERA_HEIGHT_METERS =
+        0.5; // REPLACE with actual height of Limelight from floor
+    public static final double TARGET_HEIGHT_METERS = 1.64; // Height of the Hub opening
+    public static final double CAMERA_ANGLE_DEGREES = 30.0; // REPLACE with Limelight mount angle
+
+    // Lookup Table: { Distance(Meters), RPM }
+    // MUST BE TUNED, measure distance, find best RPM, add to list.
+
+    // Please note that if the limelight angle is slightly off,
+    // The code might say a different meter distance than a tape meaasure
+    // Just shoot from the tape measure distance(2 meter for ex)
+    // And find the RPM and just put the distance as what limelight sees
+    // Even if it is wrong
+    // This might need to go up 2.5, 3, 3.5, etc
+    public static final double[][] DISTANCE_TO_RPM_MAP = {
+      {2.0, 1500},
+      {2.5, 1750},
+      {3.0, 2000},
+      {4.0, 2400},
+      {5.0, 2800},
+      {6.0, 3200}
+    };
   }
 
   /** Climber constants (placeholder) */
@@ -163,13 +198,15 @@ public final class Constants {
     public static final double CAMERA_HEIGHT_INCHES = 24.0; // Placeholder
     public static final double CAMERA_MOUNT_ANGLE_DEGREES = 30.0; // Placeholder
 
-    // ==================== MEGATAG2 VISION ESTIMATION CONSTANTS ====================
+    // ==================== MEGATAG2 VISION ESTIMATION CONSTANTS
+    // ====================
     // Standard deviation coefficients for vision measurements
     // These scale with distance and inversely with tag count
     // Formula: stdDev = coefficient * (distance^1.2) / (tagCount^2.0)
     public static final double XY_STD_DEV_COEFFICIENT = 0.01; // Base XY standard deviation
     public static final double THETA_STD_DEV_COEFFICIENT =
-        0.03; // Base theta standard deviation (not used with MegaTag2)
+        0.03; // Base theta standard deviation (not used with
+    // MegaTag2)
 
     // Maximum angular velocity for valid vision measurements (degrees/sec)
     // MegaTag2 results degrade significantly when spinning fast
@@ -188,10 +225,12 @@ public final class Constants {
 
     // ==================== LIMELIGHT 4 IMU MODES ====================
     // Mode 0: EXTERNAL_ONLY - Uses external gyro via SetRobotOrientation
-    // Mode 1: EXTERNAL_SEED - Seeds internal IMU with external, uses external for botpose
+    // Mode 1: EXTERNAL_SEED - Seeds internal IMU with external, uses external for
+    // botpose
     // Mode 2: INTERNAL_ONLY - Uses LL4's internal IMU only
     // Mode 3: INTERNAL_MT1_ASSIST - Internal IMU + MT1 vision yaw correction
-    // Mode 4: INTERNAL_EXTERNAL_ASSIST - Internal 1kHz IMU + external gyro drift correction
+    // Mode 4: INTERNAL_EXTERNAL_ASSIST - Internal 1kHz IMU + external gyro drift
+    // correction
     public static final int IMU_MODE_EXTERNAL_ONLY = 0;
     public static final int IMU_MODE_SEED_EXTERNAL = 1;
     public static final int IMU_MODE_INTERNAL_ONLY = 2;
@@ -308,6 +347,11 @@ public final class Constants {
     public static final int[] BLUE_SIDE_TAGS = {
       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
     };
+    // Red Hub Tags
+    public static final int[] RED_HUB_IDS = {2, 3, 4, 5, 8, 9, 10, 11};
+
+    // Blue Hub Tags
+    public static final int[] BLUE_HUB_IDS = {18, 19, 20, 21, 24, 25, 26, 27};
   }
 
   /** Alignment position enum - left or right side offset from AprilTag */

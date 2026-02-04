@@ -12,6 +12,7 @@ import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.ShooterConstants;
 import frc.robot.Constants.VisionConstants;
 import frc.robot.LimelightHelpers;
 
@@ -21,7 +22,6 @@ import frc.robot.LimelightHelpers;
  * <p>For REBUILT 2026 season - used for hub alignment
  */
 public class LimelightSubsystem extends SubsystemBase {
-
   // NetworkTable for Limelight data
   private final NetworkTable limelightTable;
 
@@ -77,18 +77,39 @@ public class LimelightSubsystem extends SubsystemBase {
   /**
    * Enable or disable using Limelight for odometry updates
    *
-   * <p>WATCH OUT! Vision-based pose estimation is now handled directly in CommandSwerveDrivetrain
-   * using MegaTag2 with proper standard deviations. This method is kept for compatibility but the
-   * subsystem's vision updates are disabled.
-   *
-   * @param enable True to use Limelight for odometry (currently disabled - use drivetrain instead)
-   * @deprecated Vision updates are now handled in CommandSwerveDrivetrain.updateVision()
+   * @param enable True to use Limelight for odometry
    */
-  @Deprecated
   public void setUseLimelightForOdometry(boolean enable) {
-    // Vision updates are now consolidated in CommandSwerveDrivetrain.updateVision()
-    // This prevents duplicate vision measurements and ensures consistent std dev calculations
-    this.useLimelightForOdometry = false; // Always disabled - drivetrain handles vision
+    this.useLimelightForOdometry = enable;
+  }
+
+  /**
+   * Calculates the horizontal distance to the target using Limelight's 'ty' offset. Formula: d =
+   * (h2-h1) / tan(a1+a2)
+   *
+   * @return Distance in meters, or -1.0 if no target found.
+   */
+  public double getDistanceToGoal() {
+    // 1. Check if we have a valid target
+    if (!hasTarget()) {
+      return -1.0;
+    }
+
+    // 2. Get the vertical offset angle (ty)
+    // Note: We use getTy() (lowercase y) because that matches the helper method
+    // below
+    double targetOffsetAngle_Vertical = getTy();
+
+    // 3. Convert to radians for Math.tan()
+    double angleToGoalRadians =
+        Units.degreesToRadians(ShooterConstants.CAMERA_ANGLE_DEGREES + targetOffsetAngle_Vertical);
+
+    // 4. Calculate distance
+    double distanceFromLimelightToGoalMeters =
+        (ShooterConstants.TARGET_HEIGHT_METERS - ShooterConstants.CAMERA_HEIGHT_METERS)
+            / Math.tan(angleToGoalRadians);
+
+    return distanceFromLimelightToGoalMeters;
   }
 
   @Override
@@ -100,14 +121,12 @@ public class LimelightSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Limelight/TID", getTid());
     SmartDashboard.putBoolean("Limelight/HasTarget", hasTarget());
     SmartDashboard.putNumber("Limelight/Yaw", getYaw());
+    SmartDashboard.putNumber("Limelight/DistanceMeters", getDistanceToGoal());
 
-    // WATCH OUT! Vision-based odometry updates are now handled in
-    // CommandSwerveDrivetrain.updateVision()
-    // This prevents duplicate measurements and ensures proper MegaTag2 integration with:
-    // - SetRobotOrientation called before reading pose
-    // - Dynamic standard deviations based on tag distance/count
-    // - Angular velocity rejection for MegaTag2 accuracy
-    // - Field boundary validation
+    // Update odometry with vision if enabled and drivetrain is set
+    if (useLimelightForOdometry && drivetrain != null && hasTarget()) {
+      updateOdometryWithVision();
+    }
   }
 
   /** Update drivetrain odometry with Limelight vision measurements */
@@ -130,6 +149,22 @@ public class LimelightSubsystem extends SubsystemBase {
     }
   }
 
+  public boolean isValidHubTarget() {
+    int currentID = getTid(); // Get the ID we are looking at
+
+    // 1. Check if it's a Red Hub Tag
+    if (frc.robot.Constants.contains(frc.robot.Constants.AprilTagMaps.RED_HUB_IDS, currentID)) {
+      return true;
+    }
+
+    // 2. Check if it's a Blue Hub Tag
+    if (frc.robot.Constants.contains(frc.robot.Constants.AprilTagMaps.BLUE_HUB_IDS, currentID)) {
+      return true;
+    }
+
+    // 3. It's a trench, tower, or nothing. Don't shoot!
+    return false;
+  }
   // ==================== GETTER METHODS ====================
 
   /** @return The robot pose relative to the target [tx, ty, tz, pitch, yaw, roll] */
