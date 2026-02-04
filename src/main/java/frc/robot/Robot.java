@@ -4,6 +4,9 @@
 
 package frc.robot;
 
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.HttpCamera;
+import edu.wpi.first.cscore.HttpCamera.HttpCameraKind;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -24,6 +27,22 @@ public class Robot extends TimedRobot {
   public Robot() {
     m_robotContainer = new RobotContainer();
     m_stateMachine = RobotStateMachine.getInstance();
+
+    // ==================== LIMELIGHT CAMERA STREAM FOR ELASTIC DASHBOARD
+    // ====================
+    // Add Limelight camera stream to CameraServer so it appears in Elastic
+    // dashboard
+    // The stream URL is http://limelight.local:5800 or http://<IP>:5800
+    try {
+      HttpCamera limelightCamera = new HttpCamera(
+          "Limelight",
+          "http://" + VisionConstants.LIMELIGHT_NAME + ".local:5800/stream.mjpg",
+          HttpCameraKind.kMJPGStreamer);
+      CameraServer.startAutomaticCapture(limelightCamera);
+      System.out.println("Limelight camera stream added to CameraServer");
+    } catch (Exception e) {
+      System.err.println("Failed to add Limelight camera stream: " + e.getMessage());
+    }
   }
 
   @Override
@@ -46,7 +65,8 @@ public class Robot extends TimedRobot {
     // Stay in disabled state - state machine handles alliance color updates
 
     // ==================== LIMELIGHT 4 IMU SEEDING ====================
-    // While disabled, continuously seed the Limelight's internal IMU with robot's gyro
+    // While disabled, continuously seed the Limelight's internal IMU with robot's
+    // gyro
     // This ensures the IMU is synchronized before the match starts
     LimelightHelpers.SetIMUMode(
         VisionConstants.LIMELIGHT_NAME, VisionConstants.IMU_MODE_SEED_EXTERNAL);
@@ -66,7 +86,8 @@ public class Robot extends TimedRobot {
     m_stateMachine.setMatchState(RobotStateMachine.MatchState.AUTO_INIT);
 
     // ==================== LIMELIGHT 4 IMU MODE ====================
-    // Switch to internal IMU with external gyro drift correction for best MegaTag2 performance
+    // Switch to internal IMU with external gyro drift correction for best MegaTag2
+    // performance
     LimelightHelpers.SetIMUMode(
         VisionConstants.LIMELIGHT_NAME, VisionConstants.IMU_MODE_INTERNAL_EXTERNAL_ASSIST);
     LimelightHelpers.SetIMUAssistAlpha(

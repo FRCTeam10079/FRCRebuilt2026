@@ -124,6 +124,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     double headingDeg = driveState.Pose.getRotation().getDegrees();
     double angularVelocityDegPerSec = Math.toDegrees(driveState.Speeds.omegaRadiansPerSecond);
 
+    // Log that vision update is running
+    SmartDashboard.putNumber("Vision/HeadingDeg", headingDeg);
+
     // Set robot orientation BEFORE reading MegaTag2 pose
     // This is required for MegaTag2 to work correctly
     LimelightHelpers.SetRobotOrientation(
@@ -135,13 +138,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         0,
         0);
 
-    // Get MegaTag2 pose estimate (uses robot orientation for better single-tag accuracy)
+    // Get MegaTag2 pose estimate (uses robot orientation for better single-tag
+    // accuracy)
     LimelightHelpers.PoseEstimate mt2Estimate =
         LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(
             frc.robot.Constants.VisionConstants.LIMELIGHT_NAME);
 
     // Validate measurement exists
     if (mt2Estimate == null) {
+      SmartDashboard.putString("Vision/Status", "NULL_ESTIMATE");
       return;
     }
 
@@ -153,10 +158,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     // Reject if no tags detected
     if (mt2Estimate.tagCount == 0) {
+      SmartDashboard.putString("Vision/Status", "NO_TAGS");
       return;
     }
 
-    // Reject if robot is spinning too fast (MegaTag2 degrades with high angular velocity)
+    // Reject if robot is spinning too fast (MegaTag2 degrades with high angular
+    // velocity)
     if (Math.abs(angularVelocityDegPerSec)
         > frc.robot.Constants.VisionConstants.MAX_ANGULAR_VELOCITY_DEG_PER_SEC) {
       SmartDashboard.putString("Vision/Rejected", "AngularVelocityTooHigh");
@@ -193,8 +200,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     SmartDashboard.putNumber("Vision/XYStdDev", xyStdDev);
     SmartDashboard.putBoolean("Vision/Accepted", true);
+    SmartDashboard.putString("Vision/Rejected", "None");
+    SmartDashboard.putString("Vision/Status", "ACCEPTED");
 
-    addVisionMeasurement(mt2Estimate.pose, mt2Estimate.timestampSeconds, visionStdDevs);
+    // Call super directly to avoid Utils.fpgaToCurrentTime() conversion
+    // Limelight timestamps are already in the correct format (NT server time -
+    // latency)
+    super.addVisionMeasurement(mt2Estimate.pose, mt2Estimate.timestampSeconds, visionStdDevs);
   }
 
   /*
