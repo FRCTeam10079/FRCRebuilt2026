@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.*;
+
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
@@ -41,9 +43,14 @@ public class RobotContainer {
 
   public final IntakeSubsystem intake = new IntakeSubsystem();
 
+  private final Telemetry m_telemetry =
+      new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
+
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
+
+    drivetrain.registerTelemetry(m_telemetry::telemeterize);
 
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
@@ -117,24 +124,20 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController.x().toggleOnTrue(
-    new StartEndCommand(
-        () -> intake.intakeIn(),
-        () -> intake.stop(),
-        intake
-    )
-);
+    m_driverController
+        .x()
+        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
     // ==================== STATE MACHINE EXAMPLES ====================
     // Example: Manual state transitions (add your actual bindings)
     // m_driverController.y().onTrue(Commands.runOnce(() ->
-    //     m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
+    // m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
 
     // Example: Hub shift state can be set based on FMS data or operator input
     // m_operatorController.start().onTrue(Commands.runOnce(() ->
-    //     m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
+    // m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
   }
 
   /** Get the driver controller for use in commands/subsystems */
