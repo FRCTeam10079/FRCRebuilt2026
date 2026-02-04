@@ -11,9 +11,9 @@ public class NetworkedPID extends PIDController {
 
   private String name;
 
-  private NetworkedDouble NetworkedKp;
-  private NetworkedDouble NetworkedKi;
-  private NetworkedDouble NetworkedKd;
+  private NetworkedDouble networkedKp;
+  private NetworkedDouble networkedKi;
+  private NetworkedDouble networkedKd;
   /**
    * Allocates a PIDController with the given constants for kp, ki, and kd and a default period of
    * 0.02 seconds.
@@ -79,9 +79,9 @@ public class NetworkedPID extends PIDController {
   }
 
   private void setupNT(double kp, double ki, double kd) {
-    this.NetworkedKp = new NetworkedDouble("/NetworkedLib/" + name + "/kp", kp);
-    this.NetworkedKi = new NetworkedDouble("/NetworkedLib/" + name + "/ki", ki);
-    this.NetworkedKd = new NetworkedDouble("/NetworkedLib/" + name + "/kd", kd);
+    this.networkedKp = new NetworkedDouble("/NetworkedLib/" + name + "/kp", kp);
+    this.networkedKi = new NetworkedDouble("/NetworkedLib/" + name + "/ki", ki);
+    this.networkedKd = new NetworkedDouble("/NetworkedLib/" + name + "/kd", kd);
   }
 
   /**
@@ -92,12 +92,12 @@ public class NetworkedPID extends PIDController {
    * @return The next controller output.
    */
   public double calculate(double measurement, double setpoint) {
-    UpdatePID();
+    updatePID();
     return super.calculate(measurement, setpoint);
   }
 
   /** Updates the current PID with new values */
-  public void UpdatePID() {
-    this.setPID(NetworkedKp.get(), NetworkedKi.get(), NetworkedKd.get());
+  public void updatePID() {
+    this.setPID(networkedKp.get(), networkedKi.get(), networkedKd.get());
   }
 }
