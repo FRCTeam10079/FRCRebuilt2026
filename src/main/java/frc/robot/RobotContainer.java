@@ -16,6 +16,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.subsystems.PivotSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
@@ -38,8 +39,11 @@ public class RobotContainer {
   public final LimelightSubsystem limelight = new LimelightSubsystem();
   // Indexer
   private final IndexerSubsystem indexer = new IndexerSubsystem();
+  // Pivot 
+  public final PivotSubsystem pivot = new PivotSubsystem();
+  // Intake
+  public final IntakeSubsystem intake = new IntakeSubsystem(pivot);
 
-  public final IntakeSubsystem intake = new IntakeSubsystem();
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
