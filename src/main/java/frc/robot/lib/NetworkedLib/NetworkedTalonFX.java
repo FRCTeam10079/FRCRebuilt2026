@@ -17,13 +17,13 @@ public class NetworkedTalonFX extends TalonFX {
 
   // networked prefix to just to avoid ambigiouity between actual values and their networked
   // partners
-  private NetworkedDouble networkedkA; // acceleration gain
+  private NetworkedDouble networkedKA; // acceleration gain
   private NetworkedDouble networkedkD; // derivative gain
   private NetworkedDouble networkedkG; // gravity gain
   private NetworkedDouble networkedkI; // integral gain
   private NetworkedDouble networkedkP; // proprotional gain
-  private NetworkedDouble networkedkS; // static constant (static friction)
-  private NetworkedDouble networkedkV; // velo feed forward
+  private NetworkedDouble networkedKS; // static constant (static friction)
+  private NetworkedDouble networkedKV; // velo feed forward
 
   private TalonFXConfiguration activeConfig;
 
@@ -83,13 +83,13 @@ public class NetworkedTalonFX extends TalonFX {
 
   private void setupNT(
       double kA, double kD, double kG, double kI, double kP, double kS, double kV) {
-    this.networkedkA = new NetworkedDouble("/NetworkedLib/" + this.name + "/kA", kA);
+    this.networkedKA = new NetworkedDouble("/NetworkedLib/" + this.name + "/kA", kA);
     this.networkedkD = new NetworkedDouble("/NetworkedLib/" + this.name + "/kD", kD);
     this.networkedkG = new NetworkedDouble("/NetworkedLib/" + this.name + "/kG", kG);
     this.networkedkI = new NetworkedDouble("/NetworkedLib/" + this.name + "/kI", kI);
     this.networkedkP = new NetworkedDouble("/NetworkedLib/" + this.name + "/kP", kP);
-    this.networkedkS = new NetworkedDouble("/NetworkedLib/" + this.name + "/kS", kS);
-    this.networkedkV = new NetworkedDouble("/NetworkedLib/" + this.name + "/kV", kV);
+    this.networkedKS = new NetworkedDouble("/NetworkedLib/" + this.name + "/kS", kS);
+    this.networkedKV = new NetworkedDouble("/NetworkedLib/" + this.name + "/kV", kV);
   }
 
   /**
@@ -120,24 +120,24 @@ public class NetworkedTalonFX extends TalonFX {
    */
   public void periodic() {
     // checks if any networked doubles have new information
-    if (networkedkA.available()
+    if (networkedKA.available()
         || networkedkD.available()
         || networkedkG.available()
         || networkedkI.available()
         || networkedkP.available()
-        || networkedkS.available()
-        || networkedkV.available()) {
+        || networkedKS.available()
+        || networkedKV.available()) {
 
       // ensures values like gravity FF type and other are perserved
       this.activeConfig.Slot0 = this.activeConfig
           .Slot0
-          .withKA(networkedkA.get())
+          .withKA(networkedKA.get())
           .withKD(networkedkD.get())
           .withKG(networkedkG.get())
           .withKI(networkedkI.get())
           .withKP(networkedkP.get())
-          .withKS(networkedkS.get())
-          .withKV(networkedkV.get());
+          .withKS(networkedKS.get())
+          .withKV(networkedKV.get());
 
       // the reason we arent directly applying slot0Configs is because it leaves open more stuff to
       // add to the networked possiblities later.
