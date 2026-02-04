@@ -150,11 +150,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       return;
     }
 
+    // Check for stale/default timestamp (timestamp = 0 means no valid data)
+    if (mt2Estimate.timestampSeconds == 0) {
+      SmartDashboard.putString("Vision/Status", "STALE_TIMESTAMP");
+      return;
+    }
+
     // Log vision data for debugging
     SmartDashboard.putString("Vision/Pose", mt2Estimate.pose.toString());
     SmartDashboard.putNumber("Vision/TagCount", mt2Estimate.tagCount);
     SmartDashboard.putNumber("Vision/AvgTagDist", mt2Estimate.avgTagDist);
-    SmartDashboard.putNumber("Vision/Timestamp", mt2Estimate.timestampSeconds);
+    SmartDashboard.putNumber("Vision/LimelightTimestamp", mt2Estimate.timestampSeconds);
+    SmartDashboard.putNumber("Vision/Latency", mt2Estimate.latency);
 
     // Reject if no tags detected
     if (mt2Estimate.tagCount == 0) {
@@ -166,7 +173,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // velocity)
     if (Math.abs(angularVelocityDegPerSec)
         > frc.robot.Constants.VisionConstants.MAX_ANGULAR_VELOCITY_DEG_PER_SEC) {
-      SmartDashboard.putString("Vision/Rejected", "AngularVelocityTooHigh");
+      SmartDashboard.putString("Vision/Status", "ANGULAR_VEL_TOO_HIGH");
       return;
     }
 
@@ -178,7 +185,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         || x > frc.robot.Constants.VisionConstants.FIELD_LENGTH_METERS + margin
         || y < -margin
         || y > frc.robot.Constants.VisionConstants.FIELD_WIDTH_METERS + margin) {
-      SmartDashboard.putString("Vision/Rejected", "OutOfFieldBounds");
+      SmartDashboard.putString("Vision/Status", "OUT_OF_BOUNDS");
       return;
     }
 
@@ -194,19 +201,21 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // MegaTag2 doesn't provide reliable heading, so use very high theta std dev
     double thetaStdDev = Double.POSITIVE_INFINITY;
 
-    // Create standard deviation matrix and add vision measurement
+    // Create standard deviation matrix
     Matrix<N3, N1> visionStdDevs =
         edu.wpi.first.math.VecBuilder.fill(xyStdDev, xyStdDev, thetaStdDev);
 
+    double latencySeconds = mt2Estimate.latency / 1000.0; // Convert ms to seconds
+    double fpgaTimestamp = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - latencySeconds;
+
     SmartDashboard.putNumber("Vision/XYStdDev", xyStdDev);
-    SmartDashboard.putBoolean("Vision/Accepted", true);
-    SmartDashboard.putString("Vision/Rejected", "None");
+    SmartDashboard.putNumber("Vision/FPGATimestamp", fpgaTimestamp);
     SmartDashboard.putString("Vision/Status", "ACCEPTED");
 
-    // Call super directly to avoid Utils.fpgaToCurrentTime() conversion
-    // Limelight timestamps are already in the correct format (NT server time -
-    // latency)
-    super.addVisionMeasurement(mt2Estimate.pose, mt2Estimate.timestampSeconds, visionStdDevs);
+    // Call the instance method (this.) which uses our overridden version
+    // The override applies Utils.fpgaToCurrentTime() to convert FPGA time to CTRE
+    // time
+    this.addVisionMeasurement(mt2Estimate.pose, fpgaTimestamp, visionStdDevs);
   }
 
   /*
