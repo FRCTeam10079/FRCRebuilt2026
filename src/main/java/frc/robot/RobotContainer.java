@@ -14,6 +14,7 @@ import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.commands.RunIndexer;
 import frc.robot.generated.TunerConstants;
+import frc.robot.pathfinding.Pathfinding;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
@@ -55,8 +56,21 @@ public class RobotContainer {
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
 
+    // Initialize the pathfinding system
+    initializePathfinding();
+
     // Configure button bindings
     configureBindings();
+  }
+
+  /**
+   * Initialize the pathfinding system. This loads the navgrid and starts the background AD*
+   * planning thread.
+   */
+  private void initializePathfinding() {
+    System.out.println("[RobotContainer] Initializing pathfinding system...");
+    Pathfinding.ensureInitialized();
+    System.out.println("[RobotContainer] Pathfinding system ready");
   }
 
   /**
@@ -130,6 +144,15 @@ public class RobotContainer {
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
+    // ==================== PATHFINDING CONTROLS ====================
+    // X button - Pathfind to AprilTag 10 (Red Alliance Hub Face)
+    // Uses AD* algorithm to find safe path around obstacles
+    m_driverController.x().whileTrue(drivetrain.pathfindToAprilTag10());
+
+    // B button - Pathfind to AprilTag 18 (Blue Alliance Hub Face)
+    // Alternative hub for testing/blue alliance
+    m_driverController.b().whileTrue(drivetrain.pathfindToAprilTag(18));
+
     // ==================== STATE MACHINE EXAMPLES ====================
     // Example: Manual state transitions (add your actual bindings)
     // m_driverController.y().onTrue(Commands.runOnce(() ->
@@ -156,10 +179,14 @@ public class RobotContainer {
   }
 
   /**
-   * Returns the autonomous command to run during autonomous period TODO: Implement autonomous
-   * routines using PathPlanner
+   * Returns the autonomous command to run during autonomous period. Uses pathfinding to navigate to
+   * AprilTag 10 (Red Alliance Hub).
    */
   public Command getAutonomousCommand() {
-    return Commands.print("No autonomous command configured");
+    // Set pathfinding to use autonomous obstacles (tighter margins)
+    Pathfinding.setAutoObstacles();
+
+    // Return pathfinding command to AprilTag 10
+    return drivetrain.pathfindToAprilTag10().withName("Auto: Pathfind to Tag 10");
   }
 }

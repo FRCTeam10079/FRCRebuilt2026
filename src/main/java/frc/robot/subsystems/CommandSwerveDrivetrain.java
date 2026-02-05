@@ -613,4 +613,50 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         maxVelocity,
         maxAngularVelocity));
   }
+
+  // ==================== PATHFINDING COMMANDS ====================
+
+  /**
+   * Create a command to pathfind to AprilTag 10 (Red Alliance Hub Face).
+   *
+   * <p>Uses the AD* pathfinding algorithm to find a safe path around obstacles, then follows the
+   * path using PID control.
+   *
+   * @return Command that pathfinds and drives to the scoring position in front of AprilTag 10
+   */
+  public Command pathfindToAprilTag10() {
+    return frc.robot.pathfinding.PathfindToTagCommand.toAprilTag10(this);
+  }
+
+  /**
+   * Create a command to pathfind to a specific AprilTag.
+   *
+   * @param tagId The AprilTag ID to target
+   * @return Command that pathfinds and drives to the scoring position
+   */
+  public Command pathfindToAprilTag(int tagId) {
+    return frc.robot.pathfinding.PathfindToTagCommand.toAprilTag(this, tagId);
+  }
+
+  /**
+   * Create a command to pathfind to a specific pose.
+   *
+   * @param targetPose The target pose to pathfind to
+   * @return Command that pathfinds and drives to the target
+   */
+  public Command pathfindToPose(edu.wpi.first.math.geometry.Pose2d targetPose) {
+    return new frc.robot.pathfinding.PathfindToTagCommand(
+        this, () -> targetPose, frc.robot.pathfinding.PathConstraints.DEFAULT);
+  }
+
+  /**
+   * Create a command to pathfind to a dynamically-supplied pose.
+   *
+   * @param targetPoseSupplier Supplier for the target pose
+   * @return Command that pathfinds and drives to the target
+   */
+  public Command pathfindToPose(Supplier<edu.wpi.first.math.geometry.Pose2d> targetPoseSupplier) {
+    return new frc.robot.pathfinding.PathfindToTagCommand(
+        this, targetPoseSupplier, frc.robot.pathfinding.PathConstraints.DEFAULT);
+  }
 }
