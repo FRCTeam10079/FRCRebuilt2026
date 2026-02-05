@@ -5,8 +5,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
 import frc.robot.generated.TunerConstants;
@@ -68,7 +66,8 @@ public class PivotSubsystem extends SubsystemBase {
 
   public boolean isDeployed() {
     // Use motor encoder position instead of CANcoder
-    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION) < 0.05;
+    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION)
+        < 0.05; // may need to change
   }
 
   // Read built-in motor encoder
@@ -77,12 +76,9 @@ public class PivotSubsystem extends SubsystemBase {
     return pivotMotor.getRotorPosition().getValueAsDouble();
   }
 
+  public void periodic() {
+    // TO DO- tell motor to give to pivotsetpoint
+  }
   // Commands
-  public Command deployPivotCommand() {
-    return Commands.runOnce(() -> deployPivot(), this);
-  }
 
-  public Command stowPivotCommand() {
-    return Commands.runOnce(() -> stowPivot(), this);
-  }
 }

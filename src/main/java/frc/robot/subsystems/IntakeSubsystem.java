@@ -35,12 +35,8 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void intakeIn() {
-    // Only spin the intake wheels if the pivot is deployed
-    // TO-DO: Spin Intake Wheels around 0.5 seconds before pivot is at intake
-    // position allowing intake motor spinup
-    if (pivot.isDeployed()) {
-      intakeMotor.set(IntakeConstants.INTAKE_SPEED);
-    }
+    // Spinup is handled by the DeployPivotWithSpinup.java command
+    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
   }
 
   public void stop() {
