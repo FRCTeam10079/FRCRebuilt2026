@@ -35,7 +35,7 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void intakeIn() {
-    // Spinup is handled by the DeployPivotWithSpinup.java command
+
     intakeMotor.set(IntakeConstants.INTAKE_SPEED);
   }
 

@@ -1,64 +1,56 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.PivotSubsystem;
+import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.PivotSubsystem;
 
 public class IntakePivotCommand extends Command {
 
-    private final IntakeSubsystem intake;
-    private final PivotSubsystem pivot;
+  private final PivotSubsystem pivot;
 
-    public IntakePivotCommand(IntakeSubsystem intake, PivotSubsystem pivot) {
-        this.intake = intake;
-        this.pivot = pivot;
+  public IntakePivotCommand(PivotSubsystem pivot) {
+    this.pivot = pivot;
+    addRequirements(pivot);
+  }
 
-        addRequirements(intake, pivot);
-    }
+  @Override
+  public void initialize() {
+    // Just set the pivot to move to intake position
+    pivot.deployPivot();
+  }
 
-    @Override
-    public void initialize() {
-        this.pivot.deployPivot();
-        this.intake.intakeIn();
-    }
+  @Override
+  public void execute() {
+    // Nothing else needed; pivot periodic() will handle moving to setpoint
+  }
 
-    @Override
-    public void execute() {
-    }
+  @Override
+  public void end(boolean interrupted) {
+    // Optional: you could stow pivot if command ends, but usually we leave it
+  }
 
-    // Turn off when command ends (button released)
-    @Override
-    public void end(boolean interrupted) {
-    }
+  @Override
+  public boolean isFinished() {
+    // Keep running until canceled
+    return false;
+  }
 
-    // Keep running until interrupted
-    @Override
-    public boolean isFinished() {
-        return false;
-    }
+  // Static helper commands if you want quick one-liners
+  public static Command deployPivot(PivotSubsystem pivot) {
+    return Commands.runOnce(() -> pivot.deployPivot(), pivot);
+  }
 
-    // Sequence: deploy pivot and spin up intake
-    // public static SequentialCommandGroup deployWithSpinup(PivotSubsystem pivot,
-    // IntakeSubsystem intake) {
-    // return new SequentialCommandGroup(
-    // // Step 1: move pivot down
-    // new InstantCommand(() -> pivot.deployPivot(), pivot),
-    // // Step 2: wait a little so intake spins up before pivot reaches bottom
-    // new WaitCommand(0.3), // spinup delay for intake
-    // // Step 3: start intake
-    // new InstantCommand(() -> intake.intakeIn(), intake),
-    // // Step 4: wait until pivot fully deployed
-    // new WaitUntilCommand(pivot::isDeployed),
-    // // Step 5: stop intake
-    // new InstantCommand(() -> intake.stop(), intake));
-    // }
+  public static Command stowPivot(PivotSubsystem pivot) {
+    return Commands.runOnce(() -> pivot.stowPivot(), pivot);
+  }
 
-    // public static Command deployPivot(PivotSubsystem pivot) {
-    // return Commands.runOnce(() -> pivot.deployPivot(), pivot);
-    // }
+  public static Command deployPivotWithIntake(PivotSubsystem pivot, IntakeSubsystem intake) {
+    return Commands.parallel(
+        // Pivot moves to intake position
+        new IntakePivotCommand(pivot),
 
-    // public static Command stowPivot(PivotSubsystem pivot) {
-    // return Commands.runOnce(() -> pivot.stowPivot(), pivot);
-    // }
-
+        // Intake wheels start running
+        new IntakeCommand(intake));
+  }
 }
