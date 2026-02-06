@@ -5,7 +5,6 @@
 package frc.robot;
 
 import edu.wpi.first.units.AngularAccelerationUnit;
-import edu.wpi.first.units.DimensionlessUnit;
 import edu.wpi.first.units.measure.*;
 
 import static edu.wpi.first.units.Units.*;
@@ -107,31 +106,6 @@ public final class Constants {
     public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
     public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
     public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
-
-    public static final double STALL_DEBOUNCE_TIME_MS = 100.0;
-    // Assuming 20ms loop time
-    public static final int HOMING_RING_BUFFER_SIZE = (int) (STALL_DEBOUNCE_TIME_MS / 20);
-    public static final Current HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
-    public static final Time HOMING_TIMEOUT = Seconds.of(2.0);
-
-    public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
-    public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
-    public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
-            RotationsPerSecondPerSecond.per(Second).of(0);
-
-    public static Voltage HOMING_VOLTAGE = Volts.of(2.0);
-    public static Current HOMING_CURRENT_LIMIT = Amps.of(10.0);
-    public static AngularVelocity HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
-
-    public static final double KA = 0;
-    public static final double KS = 0;
-    public static final double KG = 0;
-    public static final double KP = 0;
-    public static final double KI = 0;
-    public static final double KD = 0;
-    public static final double KV = 0;
-
-    public static final int SUPPLY_CURRENT_LIMIT = 40;
   }
 
   /** Shooter constants */
@@ -159,6 +133,38 @@ public final class Constants {
         0.5; // REPLACE with actual height of Limelight from floor
     public static final double TARGET_HEIGHT_METERS = 1.64; // Height of the Hub opening
     public static final double CAMERA_ANGLE_DEGREES = 30.0; // REPLACE with Limelight mount angle
+
+    public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
+    public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
+    public static final Angle PIVOT_MAX_POSITION = Rotations.of(0.0); // TODO: Tune
+    public static final Angle PIVOT_STOWED_POSITION = Rotations.of(0.5); // TODO: Tune
+
+    public static final Angle SETPOINT_TOLERANCE = Degrees.of(5.0); // TODO: Tune
+
+    public static final double STALL_DEBOUNCE_TIME_MS = 100.0;
+    // Assuming 20ms loop time
+    public static final int HOMING_RING_BUFFER_SIZE = (int) (STALL_DEBOUNCE_TIME_MS / 20);
+    public static final Current HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
+    public static final Time HOMING_TIMEOUT = Seconds.of(2.0);
+
+    public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
+    public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
+    public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
+            RotationsPerSecondPerSecond.per(Second).of(0);
+
+    public static Voltage HOMING_VOLTAGE = Volts.of(2.0);
+    public static Current HOMING_CURRENT_LIMIT = Amps.of(10.0);
+    public static AngularVelocity HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
+
+    public static final double KA = 0;
+    public static final double KS = 0;
+    public static final double KG = 0;
+    public static final double KP = 0;
+    public static final double KI = 0;
+    public static final double KD = 0;
+    public static final double KV = 0;
+
+    public static final int SUPPLY_CURRENT_LIMIT = 40;
 
     // Lookup Table: { Distance(Meters), RPM }
     // MUST BE TUNED, measure distance, find best RPM, add to list.

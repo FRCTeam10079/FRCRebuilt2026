@@ -15,6 +15,7 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.subsystems.ShooterPivotSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 
 /**
@@ -40,8 +41,10 @@ public class RobotContainer {
   private final IndexerSubsystem indexer = new IndexerSubsystem();
   // Shooter
   private final ShooterSubsystem shooter = new ShooterSubsystem();
+  // Pivot
+  public final ShooterPivotSubsystem pivot = new ShooterPivotSubsystem();
 
-// Telemetry - publishes robot pose to Elastic dashboard
+  // Telemetry - publishes robot pose to Elastic dashboard
   private final Telemetry logger = new Telemetry(Constants.DrivetrainConstants.MAX_SPEED_MPS);
 
   public RobotContainer() {

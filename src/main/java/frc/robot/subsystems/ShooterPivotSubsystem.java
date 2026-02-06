@@ -18,38 +18,39 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.util.CircularBuffer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants.IntakeConstants;
+import frc.robot.Constants.ShooterConstants;
 import frc.robot.generated.TunerConstants;
 
 import java.util.function.Supplier;
 
 import static edu.wpi.first.units.Units.*;
 
-public class PivotSubsystem extends SubsystemBase {
+public class ShooterPivotSubsystem extends SubsystemBase {
     enum Mode {
         NORMAL,
         HOMING,
     }
 
-    private final TalonFX pivotMotor = new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
-    private final CANcoder encoder = new CANcoder(IntakeConstants.PIVOT_ENCODER_ID);
-    private final Supplier<Angle> encoderAngle = encoder.getPosition().asSupplier();
+    final TalonFX pivotMotor = new TalonFX(ShooterConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
+    final CANcoder encoder = new CANcoder(ShooterConstants.PIVOT_ENCODER_ID);
+    final Supplier<Angle> encoderAngle = encoder.getPosition().asSupplier();
 
     // Assumes pivot is stowed
-    private double pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
-    double setpointOffset = 0.0;
+    Angle setpoint = ShooterConstants.PIVOT_STOWED_POSITION;
+    Angle setpointOffset = Rotations.zero();
 
-    CircularBuffer<Measure<CurrentUnit>> currentRingBuffer = new CircularBuffer<>(IntakeConstants.HOMING_RING_BUFFER_SIZE);
-    CircularBuffer<Measure<AngularVelocityUnit>> velocityRingBuffer = new CircularBuffer<>(IntakeConstants.HOMING_RING_BUFFER_SIZE);
+    CircularBuffer<Measure<CurrentUnit>> currentRingBuffer = new CircularBuffer<>(ShooterConstants.HOMING_RING_BUFFER_SIZE);
+    CircularBuffer<Measure<AngularVelocityUnit>> velocityRingBuffer = new CircularBuffer<>(ShooterConstants.HOMING_RING_BUFFER_SIZE);
     Supplier<Current> currentSupplier = pivotMotor.getSupplyCurrent().asSupplier();
     Supplier<AngularVelocity> velocitySupplier = pivotMotor.getVelocity().asSupplier();
-    MotionMagicVoltage pivotRequest = new MotionMagicVoltage(pivotSetpoint).withSlot(0);
+    MotionMagicVoltage pivotRequest = new MotionMagicVoltage(setpoint).withSlot(0);
+
     boolean isAtCurrentLimit = false;
     boolean isAtVelocityLimit = false;
 
     private Mode mode = Mode.NORMAL;
 
-    public PivotSubsystem() {
+    public ShooterPivotSubsystem() {
         configure(Mode.NORMAL);
     }
 
@@ -68,7 +69,7 @@ public class PivotSubsystem extends SubsystemBase {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-        config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.HOMING_SUPPLY_CURRENT_LIMIT.in(Amps);
+        config.CurrentLimits.SupplyCurrentLimit = ShooterConstants.HOMING_SUPPLY_CURRENT_LIMIT.in(Amps);
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         pivotMotor.getConfigurator().apply(config);
@@ -83,69 +84,55 @@ public class PivotSubsystem extends SubsystemBase {
         config.Slot0 = config.Slot0
                 // PID Pivot Constants
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKA(IntakeConstants.KA)
-                .withKV(IntakeConstants.KV)
-                .withKD(IntakeConstants.KD)
-                .withKG(IntakeConstants.KG)
-                .withKS(IntakeConstants.KS)
-                .withKI(IntakeConstants.KI)
-                .withKP(IntakeConstants.KP);
+                .withKA(ShooterConstants.KA)
+                .withKV(ShooterConstants.KV)
+                .withKD(ShooterConstants.KD)
+                .withKG(ShooterConstants.KG)
+                .withKS(ShooterConstants.KS)
+                .withKI(ShooterConstants.KI)
+                .withKP(ShooterConstants.KP);
 
         config.MotionMagic
-                .withMotionMagicCruiseVelocity(IntakeConstants.PIVOT_VELOCITY) // 5 (mechanism) rotations per second cruise
-                .withMotionMagicAcceleration(IntakeConstants.PIVOT_ACCELERATION) // Take approximately 0.5 seconds to reach max vel
-                .withMotionMagicJerk(IntakeConstants.PIVOT_JERK);
+                .withMotionMagicCruiseVelocity(ShooterConstants.PIVOT_VELOCITY) // 5 (mechanism) rotations per second cruise
+                .withMotionMagicAcceleration(ShooterConstants.PIVOT_ACCELERATION) // Take approximately 0.5 seconds to reach max vel
+                .withMotionMagicJerk(ShooterConstants.PIVOT_JERK);
 
         config.Feedback.SensorToMechanismRatio = 41; // Motor-to-pivot ratio
 
-        config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.SUPPLY_CURRENT_LIMIT;
+        config.CurrentLimits.SupplyCurrentLimit = ShooterConstants.SUPPLY_CURRENT_LIMIT;
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         // Prevent Pivot from moving past intake position
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = IntakeConstants.PIVOT_INTAKE_POSITION;
+        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = ShooterConstants.PIVOT_MAX_POSITION.in(Rotations);
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
         // Prevent Pivot from moving past stowed position
-        config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = IntakeConstants.PIVOT_STOWED_POSITION;
+        config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = ShooterConstants.PIVOT_STOWED_POSITION.in(Rotations);
         config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
 
         pivotMotor.getConfigurator().apply(config);
     }
 
-    public void deployPivot() {
+    public void setSetpoint(Angle angle) {
         configure(Mode.NORMAL);
-        pivotSetpoint = IntakeConstants.PIVOT_INTAKE_POSITION;
+        setpoint = angle;
     }
 
-    public void stowPivot() {
-        configure(Mode.NORMAL);
-        pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
-    }
-
-    public boolean isDeployed() {
-        // Use motor encoder position instead of CANcoder
-        return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION)
-                < 0.05; // may need to change
-    }
-
-    // Read built-in motor encoder
-    public double getPivotPosition() {
-        // Use the TalonFX built-in motor encoder (rotor) to get position of the motor
-        return pivotMotor.getRotorPosition().getValueAsDouble();
+    public boolean atSetpoint() {
+        return encoderAngle.get().isNear(setpoint, ShooterConstants.SETPOINT_TOLERANCE);
     }
 
     public void periodic() {
         currentRingBuffer.addLast(currentSupplier.get());
         velocityRingBuffer.addLast(velocitySupplier.get());
 
-        isAtCurrentLimit = getAverage(Amps.zero(), currentRingBuffer).gt(IntakeConstants.HOMING_CURRENT_LIMIT);
-        isAtVelocityLimit = getAverage(RotationsPerSecond.zero(), velocityRingBuffer).gt(IntakeConstants.HOMING_VELOCITY_LIMIT);
+        isAtCurrentLimit = getAverage(Amps.zero(), currentRingBuffer).gt(ShooterConstants.HOMING_CURRENT_LIMIT);
+        isAtVelocityLimit = getAverage(RotationsPerSecond.zero(), velocityRingBuffer).gt(ShooterConstants.HOMING_VELOCITY_LIMIT);
 
         if (mode == Mode.NORMAL) {
-            pivotMotor.setControl(pivotRequest.withPosition(pivotSetpoint - setpointOffset));
+            pivotMotor.setControl(pivotRequest.withPosition(setpoint.minus(setpointOffset)));
         }
     }
-    // Commands
 
     public boolean isHome() {
         return isAtCurrentLimit && isAtVelocityLimit;
@@ -153,7 +140,7 @@ public class PivotSubsystem extends SubsystemBase {
 
     public void startHoming() {
         configure(Mode.HOMING);
-        pivotMotor.setControl(new VoltageOut(IntakeConstants.HOMING_VOLTAGE));
+        pivotMotor.setControl(new VoltageOut(ShooterConstants.HOMING_VOLTAGE));
     }
 
     public void stopHoming() {
@@ -162,7 +149,15 @@ public class PivotSubsystem extends SubsystemBase {
     }
 
     public Command homeCommand() {
-        return new PivotHomeCommand().withTimeout(IntakeConstants.HOMING_TIMEOUT);
+        return new PivotHomeCommand().withTimeout(ShooterConstants.HOMING_TIMEOUT);
+    }
+
+    public Command pivotCommand(Angle angle) {
+        return new PivotRotateCommand(() -> angle);
+    }
+
+    public Command pivotCommand(Supplier<Angle> angle) {
+        return new PivotRotateCommand(angle);
     }
 
     private static <UNIT extends Unit> Measure<UNIT> getAverage(Measure<UNIT> initialValue, CircularBuffer<Measure<UNIT>> buffer) {
@@ -175,7 +170,7 @@ public class PivotSubsystem extends SubsystemBase {
 
     private class PivotHomeCommand extends Command {
         {
-            addRequirements(PivotSubsystem.this);
+            addRequirements(ShooterPivotSubsystem.this);
         }
 
         @Override
@@ -186,7 +181,7 @@ public class PivotSubsystem extends SubsystemBase {
         @Override
         public void end(boolean interrupted) {
             if (!interrupted) {
-                setpointOffset = encoderAngle.get().in(Rotations);
+                setpointOffset = encoderAngle.get();
             }
             stopHoming();
         }
@@ -194,6 +189,28 @@ public class PivotSubsystem extends SubsystemBase {
         @Override
         public boolean isFinished() {
             return isHome();
+        }
+    }
+
+    private class PivotRotateCommand extends Command {
+        {
+            addRequirements(ShooterPivotSubsystem.this);
+        }
+
+        final Supplier<Angle> setpoint;
+
+        private PivotRotateCommand(Supplier<Angle> setpoint) {
+            this.setpoint = setpoint;
+        }
+
+        @Override
+        public void execute() {
+            setSetpoint(setpoint.get());
+        }
+
+        @Override
+        public boolean isFinished() {
+            return atSetpoint();
         }
     }
 }
