@@ -2,7 +2,6 @@ plugins {
   id "java"
   id "edu.wpi.first.GradleRIO" version "2026.2.1"
   id "com.diffplug.spotless" version "8.1.0"
-    id 'org.jetbrains.kotlin.jvm'
 }
 
 spotless {
@@ -36,6 +35,8 @@ spotless {
 }
 
 java {
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
 }
 
 def ROBOT_MAIN_CLASS = "frc.robot.Main"
@@ -103,7 +104,6 @@ dependencies {
 
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
 test {
@@ -139,10 +139,4 @@ wpi.java.configureTestTasks(test)
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
   options.compilerArgs.add '-XDstringConcat=inline'
-}
-repositories {
-    mavenCentral()
-}
-kotlin {
-    jvmToolchain(17)
 }
