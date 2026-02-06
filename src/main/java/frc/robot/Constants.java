@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.units.AngularAccelerationUnit;
 import edu.wpi.first.units.DimensionlessUnit;
 import edu.wpi.first.units.measure.*;
 
@@ -110,6 +111,13 @@ public final class Constants {
     public static final double STALL_DEBOUNCE_TIME_MS = 100.0;
     // Assuming 20ms loop time
     public static final int HOMING_RING_BUFFER_SIZE = (int) (STALL_DEBOUNCE_TIME_MS / 20);
+    public static final Current HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
+    public static final Time HOMING_TIMEOUT = Seconds.of(2.0);
+
+    public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
+    public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
+    public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
+            RotationsPerSecondPerSecond.per(Second).of(0);
 
     public static Voltage HOMING_VOLTAGE = Volts.of(2.0);
     public static Current HOMING_CURRENT_LIMIT = Amps.of(10.0);
