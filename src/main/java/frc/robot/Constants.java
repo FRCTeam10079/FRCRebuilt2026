@@ -4,6 +4,11 @@
 
 package frc.robot;
 
+import edu.wpi.first.units.DimensionlessUnit;
+import edu.wpi.first.units.measure.*;
+
+import static edu.wpi.first.units.Units.*;
+
 /**
  * Constants for FRC 2026 REBUILT season Contains game-specific values, timing, and robot
  * configuration
@@ -97,6 +102,14 @@ public final class Constants {
     public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
     public static final double PIVOT_INTAKE_POSITION = 0.0; // TODO: Tune
     public static final double PIVOT_STOWED_POSITION = 0.5; // TODO: Tune
+
+    public static final double STALL_DEBOUNCE_TIME_MS = 100.0;
+    // Assuming 20ms loop time
+    public static final int HOMING_RING_BUFFER_SIZE = (int) (STALL_DEBOUNCE_TIME_MS / 20);
+
+    public static Voltage HOMING_VOLTAGE = Volts.of(2.0);
+    public static Current HOMING_CURRENT_LIMIT = Amps.of(10.0);
+    public static AngularVelocity HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
 
     public static final double KA = 0;
     public static final double KS = 0;
