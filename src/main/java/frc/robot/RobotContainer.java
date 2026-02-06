@@ -4,24 +4,24 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.*;
-
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
-import frc.robot.commands.RunIndexer;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
-import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.subsystems.PivotSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 
 /**
- * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
- * and button bindings are defined.
+ * RobotContainer for FRC 2026 REBUILT season
+ * This class is where the robot's subsystems, commands, and button bindings are defined.
  */
 public class RobotContainer {
 
@@ -38,19 +38,15 @@ public class RobotContainer {
 
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
-  // Indexer
-  private final IndexerSubsystem indexer = new IndexerSubsystem();
 
+  // Mechanisms
   public final IntakeSubsystem intake = new IntakeSubsystem();
-
-  private final Telemetry m_telemetry =
-      new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
+  public final PivotSubsystem pivot = new PivotSubsystem();
+  public final ShooterSubsystem shooter = new ShooterSubsystem();
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
-
-    drivetrain.registerTelemetry(m_telemetry::telemeterize);
 
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
@@ -60,106 +56,165 @@ public class RobotContainer {
   }
 
   /**
-   * Configure button bindings for driver and operator controllers This is where you bind controller
-   * buttons to commands
+   * Configure button bindings for driver and operator controllers
+   * This is where you bind controller buttons to commands
    */
   private void configureBindings() {
     // ==================== DRIVER CONTROLS ====================
-    drivetrain.setDefaultCommand(drivetrain.smoothTeleopDriveCommand(
-        () -> m_driverController.getLeftY(), // Forward/backward
-        () -> m_driverController.getLeftX(), // Left/right strafe
-        () -> m_driverController.getRightX(), // Rotation
-        Constants.DrivetrainConstants.MAX_SPEED_MPS,
-        Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+    drivetrain.setDefaultCommand(
+        drivetrain.smoothTeleopDriveCommand(
+            () -> m_driverController.getLeftY(),   // Forward/backward
+            () -> m_driverController.getLeftX(),   // Left/right strafe
+            () -> m_driverController.getRightX(),  // Rotation
+            Constants.DrivetrainConstants.MAX_SPEED_MPS,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC
+        )
+    );
 
     // ==================== VISION ALIGNMENT ====================
     // A button - Align to AprilTag (CENTER position)
-    m_driverController
-        .a()
-        .whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.CENTER));
+    m_driverController.a().whileTrue(
+        new AlignToAprilTag(drivetrain, limelight, AlignPosition.CENTER)
+    );
 
     // Left Bumper - Align to AprilTag (LEFT position)
-    m_driverController
-        .leftBumper()
-        .whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.LEFT));
+    m_driverController.leftBumper().whileTrue(
+        new AlignToAprilTag(drivetrain, limelight, AlignPosition.LEFT)
+    );
 
     // Right Bumper - Align to AprilTag (RIGHT position)
-    m_driverController
-        .rightBumper()
-        .whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT));
+    m_driverController.rightBumper().whileTrue(
+        new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT)
+    );
 
     // Y button - Reset Heading
     m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
-    // Right Trigger - Run Indexer Forward (Intake/Feed)
-
-    m_driverController
-        .rightTrigger(0.5)
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
-            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
-
-    // B Button - Run Indexer Reverse (Unjam)
-
-    m_driverController
-        .b()
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
-            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
-    m_driverController
-        .leftTrigger(0.5)
-        .whileTrue(Commands.startEnd(
+    /* 
+    m_driverController.leftTrigger(0.5).whileTrue(
+        Commands.startEnd(
             () -> {
-              drivetrain.setTeleopVelocityCoefficient(
-                  Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
-              drivetrain.setRotationVelocityCoefficient(
-                  Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+                drivetrain.setTeleopVelocityCoefficient(Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+                drivetrain.setRotationVelocityCoefficient(Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
             },
             () -> {
-              drivetrain.setTeleopVelocityCoefficient(
-                  Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
-              drivetrain.setRotationVelocityCoefficient(
-                  Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
-            }));
+                drivetrain.setTeleopVelocityCoefficient(Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+                drivetrain.setRotationVelocityCoefficient(Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+            }
+        )
+    );
+    */
+    
+    // Heading Lock to 0 degrees
+    // Hold X to lock heading to 0 degrees (facing opponent alliance wall)
+    m_driverController.x().whileTrue(
+        drivetrain.headingLockedDriveCommand(
+            () -> m_driverController.getLeftY(),
+            () -> m_driverController.getLeftX(),
+            0.0,  // Lock to 0 degrees
+            Constants.DrivetrainConstants.MAX_SPEED_MPS,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC
+        )
+    );
+
+    // Heading Lock to face AprilTag
+    // Hold right trigger to lock heading toward visible AprilTag
+    // Uses limelight TX to compute target heading dynamically
+    m_driverController.rightTrigger(0.5).whileTrue(
+        drivetrain.headingLockedDriveCommand(
+            () -> m_driverController.getLeftY(),
+            () -> m_driverController.getLeftX(),
+            () -> computeAprilTagHeading(),  // Dynamic heading from Limelight
+            Constants.DrivetrainConstants.MAX_SPEED_MPS,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC
+        )
+    );
+
+    // Shooter Spin-Up Test
+    // Hold Left Trigger to spin up shooter - controller will rumble when stable
+    // This is so that we can test the debounced isReady() logic
+    m_driverController.leftTrigger().whileTrue(
+        shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_RPM)
+    );
+    
+    // Trigger-based rumble: rumble controller when shooter is ready
+    new Trigger(shooter::isReady)
+        .and(m_driverController.leftTrigger())  // Only rumble while Left Trigger is held
+        .onTrue(Commands.runOnce(() -> 
+            m_driverController.getHID().setRumble(RumbleType.kBothRumble, 0.8)))
+        .onFalse(Commands.runOnce(() -> 
+            m_driverController.getHID().setRumble(RumbleType.kBothRumble, 0.0)));
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController
-        .x()
-        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
+    m_driverController.a().whileTrue(Commands.sequence(
+        intake.runIntakeCommand()
+    ));
+    m_driverController.b().whileTrue(Commands.sequence(
+        intake.runOuttakeCommand()
+    ));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
     // ==================== STATE MACHINE EXAMPLES ====================
     // Example: Manual state transitions (add your actual bindings)
     // m_driverController.y().onTrue(Commands.runOnce(() ->
-    // m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
+    //     m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
 
     // Example: Hub shift state can be set based on FMS data or operator input
     // m_operatorController.start().onTrue(Commands.runOnce(() ->
-    // m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
+    //     m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
   }
 
-  /** Get the driver controller for use in commands/subsystems */
+  /**
+   * Get the driver controller for use in commands/subsystems
+   */
   public CommandXboxController getDriverController() {
     return m_driverController;
   }
 
-  /** Get the operator controller for use in commands/subsystems */
+  /**
+   * Get the operator controller for use in commands/subsystems
+   */
   public CommandXboxController getOperatorController() {
     return m_operatorController;
   }
 
-  /** Get the state machine instance */
+  /**
+   * Get the state machine instance
+   */
   public RobotStateMachine getStateMachine() {
     return m_stateMachine;
   }
 
   /**
-   * Returns the autonomous command to run during autonomous period TODO: Implement autonomous
-   * routines using PathPlanner
+   * Returns the autonomous command to run during autonomous period
+   * TODO: Implement autonomous routines using PathPlanner
    */
   public Command getAutonomousCommand() {
     return Commands.print("No autonomous command configured");
+  }
+
+  /**
+   * Compute the target heading to face the currently visible AprilTag.
+   * 
+   * If a tag is visible, returns current heading + TX (to center the tag).
+   * If no tag visible, returns the current heading (maintain position).
+   * 
+   * This is used by the heading lock test to dynamically track AprilTags.
+   * I know I know that I shoudn't be doing this in RobotContainer but I'll fix it later :)
+   */
+  private double computeAprilTagHeading() {
+    if (limelight.hasTarget()) {
+      // Target heading = current heading + TX (to center the tag in frame)
+      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+      double tx = limelight.getTx();
+      return currentHeading + tx;
+    } else {
+      // No tag visible - maintain current heading
+      return drivetrain.getState().Pose.getRotation().getDegrees();
+    }
   }
 }
