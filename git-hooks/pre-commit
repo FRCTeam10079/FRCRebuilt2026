@@ -8,10 +8,10 @@ fi
 
 case $(uname) in
   MINGW*|MSYS_NT*|CYGWIN_NT*)
-    export JAVA_HOME="C:/Users/Public/wpilib/2025/jdk"
+    export JAVA_HOME="C:/Users/Public/wpilib/2026/jdk"
     ;;
   Darwin|Linux)
-    export JAVA_HOME="$HOME/wpilib/2025/jdk"
+    export JAVA_HOME="$HOME/wpilib/2026/jdk"
     ;;
   *)
     echo "Unknown OS: $(uname)"

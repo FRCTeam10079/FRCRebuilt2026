@@ -4,14 +4,12 @@
 
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,32 +23,29 @@ import frc.robot.generated.TunerConstants;
  * Auto-Ranging Lookup Table implementation
  */
 public class ShooterSubsystem extends SubsystemBase {
-
-  private final TalonFX m_masterMotor;
+  // *** UPDATED: Using TunerConstants.kCANBus ***
+  private final TalonFX m_masterMotor =
+      new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
   // DUAL MOTOR: Uncomment for 2-motor setup
   // private final TalonFX m_slaveMotor;
 
-  private final VelocityVoltage m_velocityRequest =
-      new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
+  private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0);
   private final NeutralOut m_neutralRequest = new NeutralOut();
   // DUAL MOTOR: Uncomment for 2-motor setup
   // private final Follower m_followerRequest;
 
-  private double m_targetRPM = 0.0;
-  private boolean m_isEnabled = false;
+  private double m_targetRPM;
+  private boolean m_isEnabled;
 
   // Stability tracking
-  private int m_stabilityCounter = 0;
+  private int m_stabilityCounter;
   private static final int STABILITY_CYCLES_REQUIRED = 5;
 
   // Lookup Table for Auto-Ranging
-  private final InterpolatingDoubleTreeMap m_distanceToRpmTable = new InterpolatingDoubleTreeMap();
+  private final InterpolatingDoubleTreeMap m_distanceToRPMTable = new InterpolatingDoubleTreeMap();
 
   /** Creates a new ShooterSubsystem */
   public ShooterSubsystem() {
-    // *** UPDATED: Using TunerConstants.kCANBus ***
-    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
-
     // DUAL MOTOR: Uncomment for 2-motor setup
     // m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID,
     // TunerConstants.kCANBus);
@@ -62,7 +57,7 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // Load the Lookup Table from Constants
     for (double[] pair : ShooterConstants.DISTANCE_TO_RPM_MAP) {
-      m_distanceToRpmTable.put(pair[0], pair[1]);
+      m_distanceToRPMTable.put(pair[0], pair[1]);
     }
   }
 
@@ -71,22 +66,11 @@ public class ShooterSubsystem extends SubsystemBase {
     TalonFXConfiguration masterConfig = new TalonFXConfiguration();
 
     masterConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-    masterConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-
-    masterConfig.CurrentLimits = new CurrentLimitsConfigs()
-        .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(70)
-        .withSupplyCurrentLowerLimit(40)
-        .withSupplyCurrentLowerTime(1.0)
-        .withStatorCurrentLimitEnable(true)
-        .withStatorCurrentLimit(120);
 
     masterConfig.Slot0 = new Slot0Configs()
         .withKS(ShooterConstants.SHOOTER_KS)
         .withKV(ShooterConstants.SHOOTER_KV)
-        .withKP(ShooterConstants.SHOOTER_KP)
-        .withKI(0)
-        .withKD(0);
+        .withKP(ShooterConstants.SHOOTER_KP);
 
     m_masterMotor.getConfigurator().apply(masterConfig);
   }
@@ -94,26 +78,22 @@ public class ShooterSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     // Read current velocity from motor
-    double currentRPS = m_masterMotor.getVelocity().getValueAsDouble();
-    double currentRPM = currentRPS * 60.0;
+    double currentRPM = getCurrentRPM();
 
     // Update stability counter (debouncing logic)
-    if (m_isEnabled && m_targetRPM > 0) {
+    if (m_isEnabled && m_targetRPM != 0) {
       double error = Math.abs(m_targetRPM - currentRPM);
       if (error <= ShooterConstants.SHOOTER_RPM_TOLERANCE) {
         m_stabilityCounter = Math.min(m_stabilityCounter + 1, STABILITY_CYCLES_REQUIRED);
       } else {
         m_stabilityCounter = 0;
       }
+      // Apply control to motors
+      double targetRps = m_targetRPM / 60.0;
+      m_masterMotor.setControl(m_velocityRequest.withVelocity(targetRps));
     } else {
       m_stabilityCounter = 0;
-    }
-
-    // Apply control to motors
-    if (m_isEnabled && m_targetRPM > 0) {
-      double targetRPS = m_targetRPM / 60.0;
-      m_masterMotor.setControl(m_velocityRequest.withVelocity(targetRPS));
-    } else {
+      // Apply control to motors
       m_masterMotor.setControl(m_neutralRequest);
     }
 
@@ -129,8 +109,8 @@ public class ShooterSubsystem extends SubsystemBase {
    * @param distanceMeters The distance from the target (calculated by Limelight).
    * @return The calculated RPM.
    */
-  public double getRpmForDistance(double distanceMeters) {
-    return m_distanceToRpmTable.get(distanceMeters);
+  public double getRPMForDistance(double distanceMeters) {
+    return m_distanceToRPMTable.get(distanceMeters);
   }
 
   /**
@@ -160,15 +140,13 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public boolean isReady() {
-    return m_isEnabled && m_targetRPM > 0 && m_stabilityCounter >= STABILITY_CYCLES_REQUIRED;
+    return m_isEnabled && m_targetRPM != 0 && m_stabilityCounter == STABILITY_CYCLES_REQUIRED;
   }
 
   public boolean isAtSetpoint() {
-    if (!m_isEnabled || m_targetRPM <= 0) {
-      return false;
-    }
-    double currentRPM = m_masterMotor.getVelocity().getValueAsDouble() * 60.0;
-    return Math.abs(m_targetRPM - currentRPM) <= ShooterConstants.SHOOTER_RPM_TOLERANCE;
+    return m_isEnabled
+        && m_targetRPM != 0
+        && Math.abs(m_targetRPM - getCurrentRPM()) <= ShooterConstants.SHOOTER_RPM_TOLERANCE;
   }
 
   public double getCurrentRPM() {

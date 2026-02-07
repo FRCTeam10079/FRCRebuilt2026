@@ -11,9 +11,9 @@ public class AutoShoot extends Command {
   public AutoShoot(ShooterSubsystem shooter, LimelightSubsystem limelight) {
     m_shooter = shooter;
     m_limelight = limelight;
-    addRequirements(
-        shooter); // We don't require limelight because other commands might need to read from it
+    // We don't require limelight because other commands might need to read from it
     // too
+    addRequirements(shooter);
   }
 
   @Override
@@ -29,10 +29,10 @@ public class AutoShoot extends Command {
     double distance = m_limelight.getDistanceToGoal();
 
     // 3. Calculate RPM
-    double targetRPM = m_shooter.getRpmForDistance(distance);
+    double targetRpm = m_shooter.getRpmForDistance(distance);
 
     // 4. Set Shooter
-    m_shooter.setTargetRPM(targetRPM);
+    m_shooter.setTargetRpm(targetRpm);
   }
 
   @Override
