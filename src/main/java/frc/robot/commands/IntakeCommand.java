@@ -4,17 +4,18 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IntakeSubsystem;
 
 public class IntakeCommand extends Command {
-
   private final IntakeSubsystem intake;
+  private final double speed;
 
-  public IntakeCommand(IntakeSubsystem intake) {
+  public IntakeCommand(IntakeSubsystem intake, double speed) {
     this.intake = intake;
+    this.speed = speed;
     addRequirements(intake);
   }
 
   @Override
   public void initialize() {
-    intake.intakeIn();
+    intake.setIntakePower(speed);
   }
 
   @Override
@@ -24,6 +25,6 @@ public class IntakeCommand extends Command {
 
   @Override
   public boolean isFinished() {
-    return false;
+    return true;
   }
 }

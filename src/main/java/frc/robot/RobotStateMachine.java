@@ -155,10 +155,7 @@ public class RobotStateMachine extends SubsystemBase {
     AUTO_RUNNING("Autonomous Running", true, true),
     TELEOP_INIT("Teleop Initializing", true, false),
     TELEOP_RUNNING("Teleop Running", true, false),
-    TRANSITION_SHIFT("Transition Shift Period", true, false), // Both
-    // hubs
-    // active
-    // (2:30-2:20)
+    TRANSITION_SHIFT("Transition Shift Period", true, false), // Both hubs active (2:30-2:20)
     TEST_INIT("Test Mode Initializing", true, false),
     TEST_RUNNING("Test Mode Running", true, false),
     ENDGAME("Endgame Period", true, false), // < 30 seconds remaining
@@ -534,8 +531,7 @@ public class RobotStateMachine extends SubsystemBase {
   public boolean isTransitionPeriod() {
     if (!DriverStation.isTeleopEnabled()) return false;
     double matchTime = DriverStation.getMatchTime();
-    // Transition is typically at the start of teleop (2:30-2:20, so match time
-    // 150-140)
+    // Transition is typically at the start of teleop (2:30-2:20, so match time 150-140)
     return matchTime >= 140 && matchTime <= 150;
   }
 
@@ -951,11 +947,7 @@ public class RobotStateMachine extends SubsystemBase {
   }
 
   public double getFastestCycleTime() {
-    if (fastestCycleTime == Double.MAX_VALUE) {
-      return 0;
-    } else {
-      return fastestCycleTime;
-    }
+    return fastestCycleTime == Double.MAX_VALUE ? 0 : fastestCycleTime;
   }
 
   /** Reset cycle counters (call at match start) */
