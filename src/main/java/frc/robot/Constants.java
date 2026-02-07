@@ -52,6 +52,10 @@ public final class Constants {
     public static final double JOYSTICK_DEADBAND = 0.1;
   }
 
+  public static final class RobotConstants {
+    public static final Time TARGET_LOOP_TIME = Milliseconds.of(20.0);
+  }
+
   /** Drivetrain constants */
   public static final class DrivetrainConstants {
     // ==================== SPEEDS ====================
@@ -141,9 +145,9 @@ public final class Constants {
 
     public static final Angle SETPOINT_TOLERANCE = Degrees.of(5.0); // TODO: Tune
 
-    public static final double STALL_DEBOUNCE_TIME_MS = 100.0;
+    public static final Time STALL_DEBOUNCE_TIME = Milliseconds.of(100.0);
     // Assuming 20ms loop time
-    public static final int HOMING_RING_BUFFER_SIZE = (int) (STALL_DEBOUNCE_TIME_MS / 20);
+    public static final int HOMING_RING_BUFFER_SIZE = (int)STALL_DEBOUNCE_TIME.div(RobotConstants.TARGET_LOOP_TIME).in(Value);
     public static final Current HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
     public static final Time HOMING_TIMEOUT = Seconds.of(2.0);
 
