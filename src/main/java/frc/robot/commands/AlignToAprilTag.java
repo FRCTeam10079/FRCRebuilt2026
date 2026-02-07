@@ -178,8 +178,10 @@ public class AlignToAprilTag extends Command {
       System.out.println(
           "[AlignToAprilTag] Limelight has no target, using odometry closest tag: " + targetTagID);
     } else {
-      System.out.println("[AlignToAprilTag] Limelight tag " + limelightTagID
-          + " not in map, using odometry: " + targetTagID);
+      System.out.println("[AlignToAprilTag] Limelight tag "
+          + limelightTagID
+          + " not in map, using odometry: "
+          + targetTagID);
     }
 
     // Store the tag ID to prevent switching mid-alignment
@@ -240,9 +242,13 @@ public class AlignToAprilTag extends Command {
     pidY.setSetpoint(targetPose.getY());
     pidRotate.setSetpoint(targetPose.getRotation().getRadians());
 
-    System.out.println("[AlignToAprilTag] Target Pose: X=" + targetPose.getX() + ", Y="
-        + targetPose.getY() + ", Yaw="
-        + Math.toDegrees(targetPose.getRotation().getRadians()) + "°");
+    System.out.println("[AlignToAprilTag] Target Pose: X="
+        + targetPose.getX()
+        + ", Y="
+        + targetPose.getY()
+        + ", Yaw="
+        + Math.toDegrees(targetPose.getRotation().getRadians())
+        + "°");
 
     // Log to SmartDashboard
     SmartDashboard.putNumber("AlignToAprilTag/TargetTagID", targetTagID);
@@ -356,7 +362,8 @@ public class AlignToAprilTag extends Command {
           "[AlignToAprilTag] Completed successfully - aligned to tag " + targetTagID);
     } else {
       stateMachine.setAlignedToTarget(false);
-      System.out.println("[AlignToAprilTag] " + (interrupted ? "Interrupted" : "Failed")
+      System.out.println("[AlignToAprilTag] "
+          + (interrupted ? "Interrupted" : "Failed")
           + " - alignment not confirmed");
     }
 

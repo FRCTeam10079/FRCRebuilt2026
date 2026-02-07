@@ -4,21 +4,21 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import static edu.wpi.first.units.Units.*;
+
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
+import frc.robot.commands.RunIndexer;
 import frc.robot.generated.TunerConstants;
 import frc.robot.pathfinding.Pathfinding;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
-import frc.robot.subsystems.PivotSubsystem;
-import frc.robot.subsystems.ShooterSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
@@ -39,15 +39,19 @@ public class RobotContainer {
 
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
+  // Indexer
+  private final IndexerSubsystem indexer = new IndexerSubsystem();
 
-  // Mechanisms
   public final IntakeSubsystem intake = new IntakeSubsystem();
-  public final PivotSubsystem pivot = new PivotSubsystem();
-  public final ShooterSubsystem shooter = new ShooterSubsystem();
+
+  private final Telemetry m_telemetry =
+      new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
     limelight.setDrivetrain(drivetrain);
+
+    drivetrain.registerTelemetry(m_telemetry::telemeterize);
 
     // Register controllers with state machine for haptic feedback
     m_stateMachine.registerControllers(m_driverController, m_operatorController);
@@ -101,65 +105,42 @@ public class RobotContainer {
     // Y button - Reset Heading
     m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
-    // ==================== SLOW MODE ====================
-    // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
-    /*
-    m_driverController.leftTrigger(0.5).whileTrue(
-        Commands.startEnd(
-            () -> {
-                drivetrain.setTeleopVelocityCoefficient(Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
-                drivetrain.setRotationVelocityCoefficient(Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
-            },
-            () -> {
-                drivetrain.setTeleopVelocityCoefficient(Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
-                drivetrain.setRotationVelocityCoefficient(Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
-            }
-        )
-    );
-    */
+    // Right Trigger - Run Indexer Forward (Intake/Feed)
 
-    // Heading Lock to 0 degrees
-    // Hold X to lock heading to 0 degrees (facing opponent alliance wall)
-    m_driverController
-        .x()
-        .whileTrue(drivetrain.headingLockedDriveCommand(
-            () -> m_driverController.getLeftY(),
-            () -> m_driverController.getLeftX(),
-            0.0, // Lock to 0 degrees
-            Constants.DrivetrainConstants.MAX_SPEED_MPS,
-            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
-
-    // Heading Lock to face AprilTag
-    // Hold right trigger to lock heading toward visible AprilTag
-    // Uses limelight TX to compute target heading dynamically
     m_driverController
         .rightTrigger(0.5)
-        .whileTrue(drivetrain.headingLockedDriveCommand(
-            () -> m_driverController.getLeftY(),
-            () -> m_driverController.getLeftX(),
-            () -> computeAprilTagHeading(), // Dynamic heading from Limelight
-            Constants.DrivetrainConstants.MAX_SPEED_MPS,
-            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
 
-    // Shooter Spin-Up Test
-    // Hold Left Trigger to spin up shooter - controller will rumble when stable
-    // This is so that we can test the debounced isReady() logic
+    // B Button - Run Indexer Reverse (Unjam)
+
     m_driverController
-        .leftTrigger()
-        .whileTrue(shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_RPM));
-
-    // Trigger-based rumble: rumble controller when shooter is ready
-    new Trigger(shooter::isReady)
-        .and(m_driverController.leftTrigger()) // Only rumble while Left Trigger is held
-        .onTrue(Commands.runOnce(
-            () -> m_driverController.getHID().setRumble(RumbleType.kBothRumble, 0.8)))
-        .onFalse(Commands.runOnce(
-            () -> m_driverController.getHID().setRumble(RumbleType.kBothRumble, 0.0)));
+        .b()
+        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
+            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+    // ==================== SLOW MODE ====================
+    // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
+    m_driverController
+        .leftTrigger(0.5)
+        .whileTrue(Commands.startEnd(
+            () -> {
+              drivetrain.setTeleopVelocityCoefficient(
+                  Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+              drivetrain.setRotationVelocityCoefficient(
+                  Constants.DrivetrainConstants.SLOW_MODE_COEFFICIENT);
+            },
+            () -> {
+              drivetrain.setTeleopVelocityCoefficient(
+                  Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+              drivetrain.setRotationVelocityCoefficient(
+                  Constants.DrivetrainConstants.NORMAL_SPEED_COEFFICIENT);
+            }));
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController.a().whileTrue(Commands.sequence(intake.runIntakeCommand()));
-    m_driverController.b().whileTrue(Commands.sequence(intake.runOuttakeCommand()));
+    m_driverController
+        .x()
+        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
     // TODO: Add shooter controls
     // TODO: Add climb controls
 
@@ -175,11 +156,11 @@ public class RobotContainer {
     // ==================== STATE MACHINE EXAMPLES ====================
     // Example: Manual state transitions (add your actual bindings)
     // m_driverController.y().onTrue(Commands.runOnce(() ->
-    //     m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
+    // m_stateMachine.setGameState(RobotStateMachine.GameState.AIMING_AT_HUB)));
 
     // Example: Hub shift state can be set based on FMS data or operator input
     // m_operatorController.start().onTrue(Commands.runOnce(() ->
-    //     m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
+    // m_stateMachine.setHubShiftState(RobotStateMachine.HubShiftState.MY_HUB_ACTIVE)));
   }
 
   /** Get the driver controller for use in commands/subsystems */
@@ -207,28 +188,5 @@ public class RobotContainer {
 
     // Return pathfinding command to AprilTag 10
     return drivetrain.pathfindToAprilTag10().withName("Auto: Pathfind to Tag 10");
-  }
-
-  /**
-   * Compute the target heading to face the currently visible AprilTag.
-   *
-   * <p>If a tag is visible, returns current heading - TX (to center the tag). If no tag visible,
-   * returns the current heading (maintain position).
-   *
-   * <p>This is used by the heading lock test to dynamically track AprilTags. I know I know that I
-   * shoudn't be doing this in RobotContainer but I'll fix it later :)
-   */
-  private double computeAprilTagHeading() {
-    if (limelight.hasTarget()) {
-      // Target heading = current heading - TX (TX positive means target to the right)
-      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
-      double tx = limelight.getTx();
-      double targetHeading = currentHeading - tx;
-      return MathUtil.inputModulus(targetHeading, -180.0, 180.0);
-    } else {
-      // No tag visible - maintain current heading
-      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
-      return MathUtil.inputModulus(currentHeading, -180.0, 180.0);
-    }
   }
 }
