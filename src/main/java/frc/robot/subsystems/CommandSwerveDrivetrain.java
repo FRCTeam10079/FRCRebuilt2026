@@ -476,6 +476,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     m_headingController.setHeadingControllerState(HeadingControllerState.SNAP);
   }
 
+  /** Update the target heading without resetting the controller state */
+  public void updateHeadingLockTarget(double targetDegrees) {
+    m_headingLockTarget = targetDegrees;
+    m_headingController.setGoal(targetDegrees);
+  }
+
   /** Disable heading lock mode */
   public void disableHeadingLock() {
     m_headingLockEnabled = false;
@@ -568,7 +574,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     return run(() -> {
           // Update target heading each loop (allows dynamic targeting like AprilTag tracking)
-          enableHeadingLock(targetHeadingSupplier.getAsDouble());
+          double targetHeading = targetHeadingSupplier.getAsDouble();
+          if (!m_headingLockEnabled) {
+            enableHeadingLock(targetHeading);
+          } else {
+            updateHeadingLockTarget(targetHeading);
+          }
 
           driveWithHeadingLock(
               xInputSupplier.getAsDouble(),

@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -211,7 +212,7 @@ public class RobotContainer {
   /**
    * Compute the target heading to face the currently visible AprilTag.
    *
-   * <p>If a tag is visible, returns current heading + TX (to center the tag). If no tag visible,
+   * <p>If a tag is visible, returns current heading - TX (to center the tag). If no tag visible,
    * returns the current heading (maintain position).
    *
    * <p>This is used by the heading lock test to dynamically track AprilTags. I know I know that I
@@ -219,13 +220,15 @@ public class RobotContainer {
    */
   private double computeAprilTagHeading() {
     if (limelight.hasTarget()) {
-      // Target heading = current heading + TX (to center the tag in frame)
+      // Target heading = current heading - TX (TX positive means target to the right)
       double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
       double tx = limelight.getTx();
-      return currentHeading + tx;
+      double targetHeading = currentHeading - tx;
+      return MathUtil.inputModulus(targetHeading, -180.0, 180.0);
     } else {
       // No tag visible - maintain current heading
-      return drivetrain.getState().Pose.getRotation().getDegrees();
+      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+      return MathUtil.inputModulus(currentHeading, -180.0, 180.0);
     }
   }
 }
