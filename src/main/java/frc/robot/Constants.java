@@ -145,28 +145,28 @@ public final class Constants {
 
     public static final Angle SETPOINT_TOLERANCE = Degrees.of(5.0); // TODO: Tune
 
-    public static final Time STALL_DEBOUNCE_TIME = Milliseconds.of(100.0);
+    public static final Time PIVOT_HOMING_DEBOUNCE_TIME = Milliseconds.of(100.0);
     // Assuming 20ms loop time
-    public static final int HOMING_RING_BUFFER_SIZE = (int)STALL_DEBOUNCE_TIME.div(RobotConstants.TARGET_LOOP_TIME).in(Value);
-    public static final Current HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
-    public static final Time HOMING_TIMEOUT = Seconds.of(2.0);
+    public static final int PIVOT_HOMING_RING_BUFFER_SIZE = (int) PIVOT_HOMING_DEBOUNCE_TIME.div(RobotConstants.TARGET_LOOP_TIME).in(Value);
+    public static final Current PIVOT_HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
+    public static final Time PIVOT_HOMING_TIMEOUT = Seconds.of(2.0);
 
     public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
     public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
     public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
             RotationsPerSecondPerSecond.per(Second).of(0);
 
-    public static Voltage HOMING_VOLTAGE = Volts.of(2.0);
-    public static Current HOMING_CURRENT_LIMIT = Amps.of(10.0);
-    public static AngularVelocity HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
+    public static Voltage PIVOT_HOMING_VOLTAGE = Volts.of(2.0);
+    public static Current PIVOT_HOMING_CURRENT_LIMIT = Amps.of(10.0);
+    public static AngularVelocity PIVOT_HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
 
-    public static final double KA = 0;
-    public static final double KS = 0;
-    public static final double KG = 0;
-    public static final double KP = 0;
-    public static final double KI = 0;
-    public static final double KD = 0;
-    public static final double KV = 0;
+    public static final double PIVOT_kA = 0;
+    public static final double PIVOT_kS = 0;
+    public static final double PIVOT_kG = 0;
+    public static final double PIVOT_kP = 0;
+    public static final double PIVOT_kI = 0;
+    public static final double PIVOT_kD = 0;
+    public static final double PIVOT_kV = 0;
 
     public static final int SUPPLY_CURRENT_LIMIT = 40;
 

@@ -39,8 +39,8 @@ public class ShooterPivotSubsystem extends SubsystemBase {
     Angle setpoint = ShooterConstants.PIVOT_STOWED_POSITION;
     Angle setpointOffset = Rotations.zero();
 
-    CircularBuffer<Measure<CurrentUnit>> currentRingBuffer = new CircularBuffer<>(ShooterConstants.HOMING_RING_BUFFER_SIZE);
-    CircularBuffer<Measure<AngularVelocityUnit>> velocityRingBuffer = new CircularBuffer<>(ShooterConstants.HOMING_RING_BUFFER_SIZE);
+    CircularBuffer<Measure<CurrentUnit>> currentRingBuffer = new CircularBuffer<>(ShooterConstants.PIVOT_HOMING_RING_BUFFER_SIZE);
+    CircularBuffer<Measure<AngularVelocityUnit>> velocityRingBuffer = new CircularBuffer<>(ShooterConstants.PIVOT_HOMING_RING_BUFFER_SIZE);
     Supplier<Current> currentSupplier = pivotMotor.getSupplyCurrent().asSupplier();
     Supplier<AngularVelocity> velocitySupplier = pivotMotor.getVelocity().asSupplier();
     MotionMagicVoltage pivotRequest = new MotionMagicVoltage(setpoint).withSlot(0);
@@ -69,7 +69,7 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-        config.CurrentLimits.SupplyCurrentLimit = ShooterConstants.HOMING_SUPPLY_CURRENT_LIMIT.in(Amps);
+        config.CurrentLimits.withSupplyCurrentLimit(ShooterConstants.PIVOT_HOMING_SUPPLY_CURRENT_LIMIT);
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         pivotMotor.getConfigurator().apply(config);
@@ -81,16 +81,16 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-        config.Slot0 = config.Slot0
+        config.Slot0
                 // PID Pivot Constants
                 .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKA(ShooterConstants.KA)
-                .withKV(ShooterConstants.KV)
-                .withKD(ShooterConstants.KD)
-                .withKG(ShooterConstants.KG)
-                .withKS(ShooterConstants.KS)
-                .withKI(ShooterConstants.KI)
-                .withKP(ShooterConstants.KP);
+                .withKA(ShooterConstants.PIVOT_kA)
+                .withKV(ShooterConstants.PIVOT_kV)
+                .withKD(ShooterConstants.PIVOT_kD)
+                .withKG(ShooterConstants.PIVOT_kG)
+                .withKS(ShooterConstants.PIVOT_kS)
+                .withKI(ShooterConstants.PIVOT_kI)
+                .withKP(ShooterConstants.PIVOT_kP);
 
         config.MotionMagic
                 .withMotionMagicCruiseVelocity(ShooterConstants.PIVOT_VELOCITY) // 5 (mechanism) rotations per second cruise
@@ -103,11 +103,11 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         // Prevent Pivot from moving past intake position
-        config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = ShooterConstants.PIVOT_MAX_POSITION.in(Rotations);
+        config.SoftwareLimitSwitch.withForwardSoftLimitThreshold(ShooterConstants.PIVOT_MAX_POSITION);
         config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
         // Prevent Pivot from moving past stowed position
-        config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = ShooterConstants.PIVOT_STOWED_POSITION.in(Rotations);
+        config.SoftwareLimitSwitch.withReverseSoftLimitThreshold(ShooterConstants.PIVOT_STOWED_POSITION);
         config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
 
         pivotMotor.getConfigurator().apply(config);
@@ -126,8 +126,8 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         currentRingBuffer.addLast(currentSupplier.get());
         velocityRingBuffer.addLast(velocitySupplier.get());
 
-        isAtCurrentLimit = getAverage(Amps.zero(), currentRingBuffer).gt(ShooterConstants.HOMING_CURRENT_LIMIT);
-        isAtVelocityLimit = getAverage(RotationsPerSecond.zero(), velocityRingBuffer).gt(ShooterConstants.HOMING_VELOCITY_LIMIT);
+        isAtCurrentLimit = getAverage(Amps.zero(), currentRingBuffer).gt(ShooterConstants.PIVOT_HOMING_CURRENT_LIMIT);
+        isAtVelocityLimit = getAverage(RotationsPerSecond.zero(), velocityRingBuffer).gt(ShooterConstants.PIVOT_HOMING_VELOCITY_LIMIT);
 
         if (mode == Mode.NORMAL) {
             pivotMotor.setControl(pivotRequest.withPosition(setpoint.minus(setpointOffset)));
@@ -140,7 +140,7 @@ public class ShooterPivotSubsystem extends SubsystemBase {
 
     public void startHoming() {
         configure(Mode.HOMING);
-        pivotMotor.setControl(new VoltageOut(ShooterConstants.HOMING_VOLTAGE));
+        pivotMotor.setControl(new VoltageOut(ShooterConstants.PIVOT_HOMING_VOLTAGE));
     }
 
     public void stopHoming() {
@@ -149,7 +149,7 @@ public class ShooterPivotSubsystem extends SubsystemBase {
     }
 
     public Command homeCommand() {
-        return new PivotHomeCommand().withTimeout(ShooterConstants.HOMING_TIMEOUT);
+        return new PivotHomeCommand().withTimeout(ShooterConstants.PIVOT_HOMING_TIMEOUT);
     }
 
     public Command pivotCommand(Angle angle) {
@@ -160,8 +160,8 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         return new PivotRotateCommand(angle);
     }
 
-    private static <UNIT extends Unit> Measure<UNIT> getAverage(Measure<UNIT> initialValue, CircularBuffer<Measure<UNIT>> buffer) {
-        Measure<UNIT> accumulator = initialValue;
+    private static <U extends Unit> Measure<U> getAverage(Measure<U> initialValue, CircularBuffer<Measure<U>> buffer) {
+        Measure<U> accumulator = initialValue;
         for (int i = 0; i < buffer.size(); i++) {
             accumulator = accumulator.plus(buffer.get(i));
         }
