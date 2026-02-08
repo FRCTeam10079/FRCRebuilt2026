@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -10,28 +11,21 @@ import frc.robot.Constants.IntakeConstants;
 import frc.robot.generated.TunerConstants;
 
 public class PivotSubsystem extends SubsystemBase {
-  // Initialize Pivot Motor
-  // Encoder is also intialized since encoder is built into the motor
 
-  private final TalonFX pivotMotor =
-      new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
-
-  // Assumes pivot is stowed
+  private final TalonFX pivotMotor = new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
   private double pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
 
   public PivotSubsystem() {
     configurePivotMotor();
   }
 
+  // Configure Pivot Motor
   private void configurePivotMotor() {
     TalonFXConfiguration config = new TalonFXConfiguration();
-    // Resist motion when no power is applied to hold pivot position
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-
-    config.Slot0 = config.Slot0
-        // PID Pivot Constants
-        .withGravityType(GravityTypeValue.Arm_Cosine)
+    // PID constants
+    config.Slot0 = config.Slot0.withGravityType(GravityTypeValue.Arm_Cosine)
         .withKA(IntakeConstants.KA)
         .withKV(IntakeConstants.KV)
         .withKD(IntakeConstants.KD)
@@ -40,45 +34,43 @@ public class PivotSubsystem extends SubsystemBase {
         .withKI(IntakeConstants.KI)
         .withKP(IntakeConstants.KP);
 
-    config.Feedback.SensorToMechanismRatio = 41; // Motor-to-pivot ratio
+    config.Feedback.SensorToMechanismRatio = 41;
 
     config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.SUPPLY_CURRENT_LIMIT;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    // Prevent Pivot from moving past intake position
     config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = IntakeConstants.PIVOT_INTAKE_POSITION;
     config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
-    // Prevent Pivot from moving past stowed position
     config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = IntakeConstants.PIVOT_STOWED_POSITION;
     config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
 
     pivotMotor.getConfigurator().apply(config);
   }
 
+  public void setPivotPosition(double position) {
+    pivotSetpoint = position;
+  }
+
   public void deployPivot() {
-    pivotSetpoint = IntakeConstants.PIVOT_INTAKE_POSITION;
+    setPivotPosition(IntakeConstants.PIVOT_INTAKE_POSITION);
   }
 
   public void stowPivot() {
-    pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
+    setPivotPosition(IntakeConstants.PIVOT_STOWED_POSITION);
   }
 
   public boolean isDeployed() {
-    // Use motor encoder position instead of CANcoder
-    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION)
-        < 0.05; // may need to change
+    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION) < 0.05;
   }
 
-  // Read built-in motor encoder
   public double getPivotPosition() {
-    // Use the TalonFX built-in motor encoder (rotor) to get position of the motor
     return pivotMotor.getRotorPosition().getValueAsDouble();
   }
 
+  @Override
   public void periodic() {
-    // TO DO- tell motor to give to pivotsetpoint
+    PositionVoltage request = new PositionVoltage(pivotSetpoint).withSlot(0);
+    pivotMotor.setControl(request);
   }
-  // Commands
-
 }

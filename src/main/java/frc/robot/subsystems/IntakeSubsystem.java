@@ -9,33 +9,25 @@ import frc.robot.Constants.IntakeConstants;
 import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
-  // Initialize motors and encoder
+
   private final TalonFX intakeMotor =
       new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, TunerConstants.kCANBus);
 
-  private final PivotSubsystem pivot;
-
-  public IntakeSubsystem(PivotSubsystem pivot) {
-    this.pivot = pivot;
+  public IntakeSubsystem() {
     configureIntakeMotor();
   }
 
   private void configureIntakeMotor() {
     TalonFXConfiguration config = new TalonFXConfiguration();
-    // Intake Rollers spin even if no power is applied
-    config.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-    //
+    config.MotorOutput.NeutralMode = NeutralModeValue.Coast; // wheels spin slowly to stop
     config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    // Sets Current Limits
     config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.SUPPLY_CURRENT_LIMIT;
-    // Enable Current Limits
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
     intakeMotor.getConfigurator().apply(config);
   }
 
   public void intakeIn() {
-
     intakeMotor.set(IntakeConstants.INTAKE_SPEED);
   }
 
