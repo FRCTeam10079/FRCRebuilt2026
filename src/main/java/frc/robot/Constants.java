@@ -163,8 +163,8 @@ public final class Constants {
 
     // Pipeline IDs
     public static final int PIPELINE_HUB_TRACKING = 0;
-    public static final int PIPELINE_FUEL_DETECTION = 1;
-    public static final int PIPELINE_APRILTAG = 2;
+    public static final int PIPELINE_FUEL_DETECTION = 0;
+    public static final int PIPELINE_APRILTAG = 0;
 
     // Target height for hub (inches from floor)
     public static final double HUB_TARGET_HEIGHT_INCHES = 104.0; // Placeholder
