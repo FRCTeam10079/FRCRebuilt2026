@@ -151,14 +151,14 @@ public final class Constants {
     public static final Current PIVOT_HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
     public static final Time PIVOT_HOMING_TIMEOUT = Seconds.of(2.0);
 
-    public static AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
-    public static AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
+    public static final AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
+    public static final AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
     public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
             RotationsPerSecondPerSecond.per(Second).of(0);
 
-    public static Voltage PIVOT_HOMING_VOLTAGE = Volts.of(2.0);
-    public static Current PIVOT_HOMING_CURRENT_LIMIT = Amps.of(10.0);
-    public static AngularVelocity PIVOT_HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
+    public static final Voltage PIVOT_HOMING_VOLTAGE = Volts.of(2.0);
+    public static final Current PIVOT_HOMING_CURRENT_LIMIT = Amps.of(10.0);
+    public static final AngularVelocity PIVOT_HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
 
     public static final double PIVOT_kA = 0;
     public static final double PIVOT_kS = 0;
@@ -168,7 +168,7 @@ public final class Constants {
     public static final double PIVOT_kD = 0;
     public static final double PIVOT_kV = 0;
 
-    public static final int SUPPLY_CURRENT_LIMIT = 40;
+    public static final Current SUPPLY_CURRENT_LIMIT = Amps.of(40);
 
     // Lookup Table: { Distance(Meters), RPM }
     // MUST BE TUNED, measure distance, find best RPM, add to list.

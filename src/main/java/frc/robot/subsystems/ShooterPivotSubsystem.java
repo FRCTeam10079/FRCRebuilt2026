@@ -81,25 +81,23 @@ public class ShooterPivotSubsystem extends SubsystemBase {
         config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-        config.Slot0
-                // PID Pivot Constants
-                .withGravityType(GravityTypeValue.Arm_Cosine)
-                .withKA(ShooterConstants.PIVOT_kA)
-                .withKV(ShooterConstants.PIVOT_kV)
-                .withKD(ShooterConstants.PIVOT_kD)
-                .withKG(ShooterConstants.PIVOT_kG)
-                .withKS(ShooterConstants.PIVOT_kS)
-                .withKI(ShooterConstants.PIVOT_kI)
-                .withKP(ShooterConstants.PIVOT_kP);
+        // PID Pivot Constants
+        config.Slot0.withGravityType(GravityTypeValue.Arm_Cosine);
+        config.Slot0.withKA(ShooterConstants.PIVOT_kA);
+        config.Slot0.withKV(ShooterConstants.PIVOT_kV);
+        config.Slot0.withKD(ShooterConstants.PIVOT_kD);
+        config.Slot0.withKG(ShooterConstants.PIVOT_kG);
+        config.Slot0.withKS(ShooterConstants.PIVOT_kS);
+        config.Slot0.withKI(ShooterConstants.PIVOT_kI);
+        config.Slot0.withKP(ShooterConstants.PIVOT_kP);
 
-        config.MotionMagic
-                .withMotionMagicCruiseVelocity(ShooterConstants.PIVOT_VELOCITY) // 5 (mechanism) rotations per second cruise
-                .withMotionMagicAcceleration(ShooterConstants.PIVOT_ACCELERATION) // Take approximately 0.5 seconds to reach max vel
-                .withMotionMagicJerk(ShooterConstants.PIVOT_JERK);
+        config.MotionMagic.withMotionMagicCruiseVelocity(ShooterConstants.PIVOT_VELOCITY); // 5 (mechanism) rotations per second cruise
+        config.MotionMagic.withMotionMagicAcceleration(ShooterConstants.PIVOT_ACCELERATION); // Take approximately 0.5 seconds to reach max vel
+        config.MotionMagic.withMotionMagicJerk(ShooterConstants.PIVOT_JERK);
 
-        config.Feedback.SensorToMechanismRatio = 41; // Motor-to-pivot ratio
+        config.Feedback.SensorToMechanismRatio = 41.0; // Motor-to-pivot ratio
 
-        config.CurrentLimits.SupplyCurrentLimit = ShooterConstants.SUPPLY_CURRENT_LIMIT;
+        config.CurrentLimits.withSupplyCurrentLimit(ShooterConstants.SUPPLY_CURRENT_LIMIT);
         config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
         // Prevent Pivot from moving past intake position
