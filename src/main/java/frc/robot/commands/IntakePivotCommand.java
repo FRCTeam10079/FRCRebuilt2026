@@ -13,9 +13,7 @@ public class IntakePivotCommand extends Command {
     addRequirements(pivot);
   }
 
-  /**
-   * Deploys the pivot upon initalization
-   */
+  /** Deploys the pivot upon initalization */
   @Override
   public void initialize() {
     pivot.deployPivot();
@@ -27,9 +25,7 @@ public class IntakePivotCommand extends Command {
   @Override
   public void end(boolean interrupted) {}
 
-  /**
-   * Only finishes once deployed completely
-   * */
+  /** Only finishes once deployed completely */
   @Override
   public boolean isFinished() {
     return pivot.isDeployed();

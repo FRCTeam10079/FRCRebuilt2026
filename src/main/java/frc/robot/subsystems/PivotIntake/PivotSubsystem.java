@@ -12,7 +12,8 @@ import frc.robot.generated.TunerConstants;
 
 public class PivotSubsystem extends SubsystemBase {
 
-  private final TalonFX pivotMotor = new TalonFX(IntakeConstants.Pivot.MOTOR_ID, TunerConstants.kCANBus);
+  private final TalonFX pivotMotor =
+      new TalonFX(IntakeConstants.Pivot.MOTOR_ID, TunerConstants.kCANBus);
   private double pivotSetpoint = IntakeConstants.Pivot.STOWED_POSITION;
 
   public PivotSubsystem() {
@@ -61,7 +62,8 @@ public class PivotSubsystem extends SubsystemBase {
   }
 
   public boolean isDeployed() {
-    return Math.abs(getPivotPosition() - IntakeConstants.Pivot.INTAKE_POSITION) < IntakeConstants.Pivot.DEPLOY_TOLERANCE;
+    return Math.abs(getPivotPosition() - IntakeConstants.Pivot.INTAKE_POSITION)
+        < IntakeConstants.Pivot.DEPLOY_TOLERANCE;
   }
 
   public double getPivotPosition() {
