@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.PivotIntake;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -12,9 +12,8 @@ import frc.robot.generated.TunerConstants;
 
 public class PivotSubsystem extends SubsystemBase {
 
-  private final TalonFX pivotMotor =
-      new TalonFX(IntakeConstants.PIVOT_MOTOR_ID, TunerConstants.kCANBus);
-  private double pivotSetpoint = IntakeConstants.PIVOT_STOWED_POSITION;
+  private final TalonFX pivotMotor = new TalonFX(IntakeConstants.Pivot.MOTOR_ID, TunerConstants.kCANBus);
+  private double pivotSetpoint = IntakeConstants.Pivot.STOWED_POSITION;
 
   public PivotSubsystem() {
     configurePivotMotor();
@@ -27,23 +26,23 @@ public class PivotSubsystem extends SubsystemBase {
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     // PID constants
     config.Slot0 = config.Slot0.withGravityType(GravityTypeValue.Arm_Cosine)
-        .withKA(IntakeConstants.KA)
-        .withKV(IntakeConstants.KV)
-        .withKD(IntakeConstants.KD)
-        .withKG(IntakeConstants.KG)
-        .withKS(IntakeConstants.KS)
-        .withKI(IntakeConstants.KI)
-        .withKP(IntakeConstants.KP);
+        .withKA(IntakeConstants.Pivot.KA)
+        .withKV(IntakeConstants.Pivot.KV)
+        .withKD(IntakeConstants.Pivot.KD)
+        .withKG(IntakeConstants.Pivot.KG)
+        .withKS(IntakeConstants.Pivot.KS)
+        .withKI(IntakeConstants.Pivot.KI)
+        .withKP(IntakeConstants.Pivot.KP);
 
-    config.Feedback.SensorToMechanismRatio = 41;
+    config.Feedback.SensorToMechanismRatio = IntakeConstants.Pivot.SENSOR_MECHANISM_RATIO;
 
-    config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.SUPPLY_CURRENT_LIMIT;
+    config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.Pivot.SUPPLY_CURRENT_LIMIT;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = IntakeConstants.PIVOT_INTAKE_POSITION;
+    config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = IntakeConstants.Pivot.INTAKE_POSITION;
     config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
 
-    config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = IntakeConstants.PIVOT_STOWED_POSITION;
+    config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = IntakeConstants.Pivot.STOWED_POSITION;
     config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
 
     pivotMotor.getConfigurator().apply(config);
@@ -54,15 +53,15 @@ public class PivotSubsystem extends SubsystemBase {
   }
 
   public void deployPivot() {
-    setPivotPosition(IntakeConstants.PIVOT_INTAKE_POSITION);
+    setPivotPosition(IntakeConstants.Pivot.INTAKE_POSITION);
   }
 
   public void stowPivot() {
-    setPivotPosition(IntakeConstants.PIVOT_STOWED_POSITION);
+    setPivotPosition(IntakeConstants.Pivot.STOWED_POSITION);
   }
 
   public boolean isDeployed() {
-    return Math.abs(getPivotPosition() - IntakeConstants.PIVOT_INTAKE_POSITION) < 0.05;
+    return Math.abs(getPivotPosition() - IntakeConstants.Pivot.INTAKE_POSITION) < IntakeConstants.Pivot.DEPLOY_TOLERANCE;
   }
 
   public double getPivotPosition() {

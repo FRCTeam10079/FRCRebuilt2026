@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot.subsystems.PivotIntake;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -10,8 +10,7 @@ import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor =
-      new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, TunerConstants.kCANBus);
+  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
 
   public IntakeSubsystem() {
     configureIntakeMotor();
@@ -21,14 +20,14 @@ public class IntakeSubsystem extends SubsystemBase {
     TalonFXConfiguration config = new TalonFXConfiguration();
     config.MotorOutput.NeutralMode = NeutralModeValue.Coast; // wheels spin slowly to stop
     config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.SUPPLY_CURRENT_LIMIT;
+    config.CurrentLimits.SupplyCurrentLimit = IntakeConstants.Wheels.SUPPLY_CURRENT_LIMIT;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
 
     intakeMotor.getConfigurator().apply(config);
   }
 
   public void intakeIn() {
-    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
+    intakeMotor.set(IntakeConstants.Wheels.SPEED);
   }
 
   public void stop() {

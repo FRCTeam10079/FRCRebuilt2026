@@ -17,9 +17,9 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.pathfinding.Pathfinding;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
-import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
-import frc.robot.subsystems.PivotSubsystem;
+import frc.robot.subsystems.PivotIntake.IntakeSubsystem;
+import frc.robot.subsystems.PivotIntake.PivotSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
