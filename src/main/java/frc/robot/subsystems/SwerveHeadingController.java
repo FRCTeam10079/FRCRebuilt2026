@@ -147,7 +147,7 @@ public class SwerveHeadingController {
    * @return Position error in degrees (positive = need to rotate CCW)
    */
   public double getError() {
-    return m_pidController.getPositionError();
+    return m_pidController.getError();
   }
 
   // HELPER METHODS

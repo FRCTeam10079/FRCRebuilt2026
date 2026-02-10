@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.ShooterConstants;
+import frc.robot.generated.TunerConstants;
 
 /**
  * This subsystem contains: - Debounced "isReady()" check to ensure flywheel stability before
@@ -45,14 +46,16 @@ public class ShooterSubsystem extends SubsystemBase {
   private boolean m_isEnabled = false;
 
   // Stability tracking with debouncing
-  // We require the flywheel to be within tolerance for STABILITY_CYCLES consecutive
-  // loops before we report "ready". This prevents false positives from RPM flickering.
+  // We require the flywheel to be within tolerance for STABILITY_CYCLES
+  // consecutive
+  // loops before we report "ready". This prevents false positives from RPM
+  // flickering.
   private int m_stabilityCounter = 0;
   private static final int STABILITY_CYCLES_REQUIRED = 5; // ~100ms at 50Hz
 
   /** Creates a new ShooterSubsystem */
   public ShooterSubsystem() {
-    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, "canivore");
+    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
     // DUAL MOTOR: Uncomment for 2-motor setup
     // m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID, "canivore");
 
@@ -108,10 +111,10 @@ public class ShooterSubsystem extends SubsystemBase {
     //
     // // Current limits for slave (same as master)
     // slaveConfig.CurrentLimits = new CurrentLimitsConfigs()
-    //         .withSupplyCurrentLimitEnable(true)
-    //         .withSupplyCurrentLimit(40)
-    //         .withStatorCurrentLimitEnable(true)
-    //         .withStatorCurrentLimit(80);
+    // .withSupplyCurrentLimitEnable(true)
+    // .withSupplyCurrentLimit(40)
+    // .withStatorCurrentLimitEnable(true)
+    // .withStatorCurrentLimit(80);
     //
     // m_slaveMotor.getConfigurator().apply(slaveConfig);
   }
@@ -158,7 +161,8 @@ public class ShooterSubsystem extends SubsystemBase {
     SmartDashboard.putBoolean("Shooter/IsEnabled", m_isEnabled);
     SmartDashboard.putBoolean("Shooter/IsReady", isReady());
     SmartDashboard.putNumber("Shooter/StabilityCounter", m_stabilityCounter);
-    // Current monitoring - When testing, make sure to watch these to verify limits aren't clamping
+    // Current monitoring - When testing, make sure to watch these to verify limits
+    // aren't clamping
     // output
     SmartDashboard.putNumber(
         "Shooter/SupplyCurrent", m_masterMotor.getSupplyCurrent().getValueAsDouble());
