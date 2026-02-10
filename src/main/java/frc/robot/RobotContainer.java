@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.commands.RunIndexer;
@@ -162,8 +161,9 @@ public class RobotContainer {
     // ==================== OPERATOR (TEST) CONTROLS ====================
     // Heading Lock to 0 degrees
     // Hold X to lock heading to 0 degrees (facing opponent alliance wall)
-    m_operatorController.x().whileTrue(
-        drivetrain.headingLockedDriveCommand(
+    m_operatorController
+        .x()
+        .whileTrue(drivetrain.headingLockedDriveCommand(
             () -> m_driverController.getLeftY(),
             () -> m_driverController.getLeftX(),
             0.0, // Lock to 0 degrees
@@ -173,8 +173,9 @@ public class RobotContainer {
     // Heading Lock to face AprilTag
     // Hold right trigger to lock heading toward visible AprilTag
     // Uses limelight TX to compute target heading dynamically
-    m_operatorController.rightTrigger(0.5).whileTrue(
-        drivetrain.headingLockedDriveCommand(
+    m_operatorController
+        .rightTrigger(0.5)
+        .whileTrue(drivetrain.headingLockedDriveCommand(
             () -> m_driverController.getLeftY(),
             () -> m_driverController.getLeftX(),
             () -> computeAprilTagHeading(), // Dynamic heading from Limelight
@@ -184,8 +185,9 @@ public class RobotContainer {
     // Shooter Spin-Up Test
     // Hold Left Trigger to spin up shooter - controller will rumble when stable
     // This is so that we can test the debounced isReady() logic
-    m_operatorController.leftTrigger().whileTrue(
-        shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_RPM));
+    m_operatorController
+        .leftTrigger()
+        .whileTrue(shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_RPM));
 
     // Trigger-based rumble: rumble controller when shooter is ready
     new Trigger(shooter::isReady)

@@ -116,7 +116,8 @@ public final class Constants {
     public static final double SHOOTER_MAX_RPM = 5500; // Kraken X60 free speed ~6000 RPM
 
     // RPM tolerance for "at setpoint" check
-    // 1678 used 500 RPM - starting with 150 cuz Krakens are more consistent at that speed
+    // 1678 used 500 RPM - starting with 150 cuz Krakens are more consistent at that
+    // speed
     public static final double SHOOTER_RPM_TOLERANCE = 150;
 
     // Velocity PID gains
@@ -151,7 +152,8 @@ public final class Constants {
    */
   public static final class HeadingControllerConstants {
     // SNAP mode gains - aggressive to quickly reach target heading
-    // Output is normalized (-1 to 1), so these are effectively output per degree of error
+    // Output is normalized (-1 to 1), so these are effectively output per degree of
+    // error
     public static final double SNAP_KP = 0.02; // 254 used 0.05 (degrees output per degree error)
     public static final double SNAP_KI = 0.0;
     public static final double SNAP_KD = 0.001;
@@ -202,13 +204,15 @@ public final class Constants {
     public static final double CAMERA_HEIGHT_INCHES = 24.0; // Placeholder
     public static final double CAMERA_MOUNT_ANGLE_DEGREES = 30.0; // Placeholder
 
-    // ==================== MEGATAG2 VISION ESTIMATION CONSTANTS ====================
+    // ==================== MEGATAG2 VISION ESTIMATION CONSTANTS
+    // ====================
     // Standard deviation coefficients for vision measurements
     // These scale with distance and inversely with tag count
     // Formula: stdDev = coefficient * (distance^1.2) / (tagCount^2.0)
     public static final double XY_STD_DEV_COEFFICIENT = 0.01; // Base XY standard deviation
     public static final double THETA_STD_DEV_COEFFICIENT =
-        0.03; // Base theta standard deviation (not used with MegaTag2)
+        0.03; // Base theta standard deviation (not used with
+    // MegaTag2)
 
     // Maximum angular velocity for valid vision measurements (degrees/sec)
     // MegaTag2 results degrade significantly when spinning fast
@@ -227,10 +231,12 @@ public final class Constants {
 
     // ==================== LIMELIGHT 4 IMU MODES ====================
     // Mode 0: EXTERNAL_ONLY - Uses external gyro via SetRobotOrientation
-    // Mode 1: EXTERNAL_SEED - Seeds internal IMU with external, uses external for botpose
+    // Mode 1: EXTERNAL_SEED - Seeds internal IMU with external, uses external for
+    // botpose
     // Mode 2: INTERNAL_ONLY - Uses LL4's internal IMU only
     // Mode 3: INTERNAL_MT1_ASSIST - Internal IMU + MT1 vision yaw correction
-    // Mode 4: INTERNAL_EXTERNAL_ASSIST - Internal 1kHz IMU + external gyro drift correction
+    // Mode 4: INTERNAL_EXTERNAL_ASSIST - Internal 1kHz IMU + external gyro drift
+    // correction
     public static final int IMU_MODE_EXTERNAL_ONLY = 0;
     public static final int IMU_MODE_SEED_EXTERNAL = 1;
     public static final int IMU_MODE_INTERNAL_ONLY = 2;

@@ -2,12 +2,6 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.*;
 
-import java.util.Optional;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
-
-import org.littletonrobotics.junction.Logger;
-
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
@@ -33,10 +27,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.Constants;
 import frc.robot.LimelightHelpers;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.subsystems.SwerveHeadingController.HeadingControllerState;
+import java.util.Optional;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements Subsystem so it can easily
@@ -688,8 +685,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * @param maxAngularVelocity Maximum angular velocity (rad/s)
    */
   public void driveWithHeadingLock(
-      double xInput, double yInput,
-      double maxVelocity, double maxAngularVelocity) {
+      double xInput, double yInput, double maxVelocity, double maxAngularVelocity) {
 
     // Apply deadband to translation inputs
     double xMagnitude = MathUtil.applyDeadband(xInput, CONTROLLER_DEADBAND);
@@ -743,20 +739,22 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       double maxAngularVelocity) {
 
     return run(() -> {
-      // Update target heading each loop (allows dynamic targeting like AprilTag tracking)
-      double targetHeading = targetHeadingSupplier.getAsDouble();
-      if (!m_headingLockEnabled) {
-        enableHeadingLock(targetHeading);
-      } else {
-        updateHeadingLockTarget(targetHeading);
-      }
+          // Update target heading each loop (allows dynamic targeting like AprilTag
+          // tracking)
+          double targetHeading = targetHeadingSupplier.getAsDouble();
+          if (!m_headingLockEnabled) {
+            enableHeadingLock(targetHeading);
+          } else {
+            updateHeadingLockTarget(targetHeading);
+          }
 
-      driveWithHeadingLock(
-          xInputSupplier.getAsDouble(),
-          yInputSupplier.getAsDouble(),
-          maxVelocity,
-          maxAngularVelocity);
-    }).finallyDo(this::disableHeadingLock);
+          driveWithHeadingLock(
+              xInputSupplier.getAsDouble(),
+              yInputSupplier.getAsDouble(),
+              maxVelocity,
+              maxAngularVelocity);
+        })
+        .finallyDo(this::disableHeadingLock);
   }
 
   /**
@@ -777,11 +775,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       double maxAngularVelocity) {
 
     return headingLockedDriveCommand(
-        xInputSupplier,
-        yInputSupplier,
-        () -> fixedTargetHeading,
-        maxVelocity,
-        maxAngularVelocity);
+        xInputSupplier, yInputSupplier, () -> fixedTargetHeading, maxVelocity, maxAngularVelocity);
   }
 
   // ==================== PATHFINDING COMMANDS ====================
