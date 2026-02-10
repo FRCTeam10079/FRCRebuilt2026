@@ -9,6 +9,7 @@ package frc.robot;
  * configuration
  */
 public final class Constants {
+  private Constants() {}
 
   /** Game timing constants for REBUILT */
   public static final class GameConstants {
