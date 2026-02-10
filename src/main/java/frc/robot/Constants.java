@@ -223,7 +223,6 @@ public final class Constants {
   public static final class IndexerConstants {
     private IndexerConstants() {}
 
-
     public static final int kFeederMotorID = 20; // This ID confirmed
     public static final int kSpindexerMotorID = 15; // This id not confirmed
 
@@ -274,9 +273,9 @@ public final class Constants {
   // ==================== APRIL TAG FIELD LAYOUT ====================
 
   /**
-   * AprilTag positions on the field
-   * <br>
-   * Format: <code>HashMap&lt;TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}&rt;</code>
+   * AprilTag positions on the field <br>
+   * Format: <code>
+   * HashMap&lt;TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}&rt;</code>
    */
   public static final class AprilTagMaps {
     private AprilTagMaps() {}
