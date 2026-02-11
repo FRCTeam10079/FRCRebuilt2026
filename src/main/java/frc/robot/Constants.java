@@ -247,19 +247,66 @@ public final class Constants {
     public static final double IMU_ASSIST_ALPHA =
         0.001; // Higher = faster convergence to assist source
   }
-
   public static final class IndexerConstants {
+    public static final int kFeederMotorID = 20;
+    public static final int kSpindexerMotorID = 15;
+    
+    // Safety
+    public static final int kCurrentLimit = 40; // Amps
+    
+    // Feeder PID Gains
+    // These values control the motor that pushes the ball into the shooter.
+    // It usually needs high RPM and fast reaction time.
+    
+    // kP: How hard to push based on error.
+    // Example: If target is 2000 and we are at 1000, kP decides how much voltage to dump.
+    // Too High: It vibrates/oscillates. Too Low: It never reaches top speed.
+    public static final double kFeederKP = 0.2;
+    
+    // kI: Accumulates error over time.
+    // Example: If it gets stuck at 1950 RPM and won't hit 2000, kI slowly adds power until it does.
+    // WARNING: Keep at 0 usually. If too high, it goes out of control.
+    public static final double kFeederKI = 0.0;
+    
+    // kD: Predicts the future to stop overshoot.
+    // Example: As it gets close to 2000 RPM, kD pulls back so it doesn't fly past it to 2500.
+    public static final double kFeederKD = 0.0;
+    
+    // kS: Voltage to overcome static friction.
+    // Example: The minimum power needed just to make the gears start turning.
+    public static final double kFeederKS = 0.15;
+    
+    // kV: Voltage needed per RPM.
+    // Example: "To go 100 RPM I need 1 Volt." This does most of the work
+    public static final double kFeederKV = 0.12;
+    
+    // kA voltage needed to acclerate;
+    // Example: pushes extra power when you first press the button to get up to speed instantly.
+    public static final double kFeederKA = 0.01;
+    
 
-    public static final int kFeederMotorID = 20; // This ID confirmed
-    public static final int kSpindexerMotorID = 15; // This id not confirmed
-
-    // Safety Limits
-    public static final int kCurrentLimit = 40;
-
-    // Speeds (-1.0 to 1.0)
-    public static final double kForwardSpeed = 0.5;
-    public static final double kReverseSpeed = -0.5;
-  }
+    
+// Spindexer PID gains
+    // These values control the floor/star wheel that moves balls around.
+    // It usually runs slower but needs more torque to push multiple balls.
+    
+    public static final double kSpindexerKP = 0.3; // Likely needs higher P to push through jams
+    public static final double kSpindexerKI = 0.0;
+    public static final double kSpindexerKD = 0.0;
+    public static final double kSpindexerKS = 0.2; // Likely higher friction than feeder
+    public static final double kSpindexerKV = 0.12;
+    public static final double kSpindexerKA = 0.01;
+    public static final double kSpindexerKG = 0.0;
+    
+    // Target speeds RPM
+    // Feeder (Fast)
+    public static final double kFeederTargetRPM = 3000;
+    public static final double kFeederReverseRPM = -1000;
+    
+    // Spindexer (Slow/Torque)
+    public static final double kSpindexerTargetRPM = 1000;
+    public static final double kSpindexerReverseRPM = -1000;
+    }
   // ==================== UTILITY METHODS ====================
 
   /** Inches to Meters conversion factor */

@@ -5,38 +5,49 @@ import frc.robot.subsystems.IndexerSubsystem;
 
 public class RunIndexer extends Command {
 
-  private final IndexerSubsystem indexer;
-  private final double speed;
+private final IndexerSubsystem m_indexer;
+private final double m_feederRPM;
+private final double m_spindexerRPM;
 
-  public RunIndexer(IndexerSubsystem indexer, double speed) {
-    this.indexer = indexer;
-    this.speed = speed;
+/**
+* Runs the indexer with specific speeds for both motors.
+*
+* @param indexer The subsystem
+* @param feederRPM Target RPM for the fast top roller
+* @param spindexerRPM Target RPM for the floor/star wheel
+*/
+public RunIndexer(IndexerSubsystem indexer, double feederRPM, double spindexerRPM) {
+m_indexer = indexer;
+m_feederRPM = feederRPM;
+m_spindexerRPM = spindexerRPM;
 
-    // Tell scheduler that we are using indexer
-    addRequirements(indexer);
-  }
-
-  // Turn on when command starts
-  @Override
-  public void initialize() {
-    indexer.setSpeed(speed);
-  }
-
-  @Override
-  public void execute() {
-    // Forces motor to keep spinning even if a CAN packet was dropped.
-    indexer.setSpeed(speed);
-  }
-
-  // Turn off when command ends (button released)
-  @Override
-  public void end(boolean interrupted) {
-    indexer.stop();
-  }
-
-  // Keep running until interrupted
-  @Override
-  public boolean isFinished() {
-    return false;
-  }
+// Lock the subsystem so no one else uses it
+addRequirements(indexer);
 }
+
+// Called when the command is initially scheduled.
+@Override
+public void initialize() {
+m_indexer.setSpeeds(m_feederRPM, m_spindexerRPM);
+}
+
+// Called every time the scheduler runs while the command is scheduled.
+@Override
+public void execute() {
+// We call this continuously to ensure the motor controller keeps getting the signal
+m_indexer.setSpeeds(m_feederRPM, m_spindexerRPM);
+}
+
+// Called once the command ends or is interrupted.
+@Override
+public void end(boolean interrupted) {
+m_indexer.stop();
+}
+
+// Returns true when the command should end.
+@Override
+public boolean isFinished() {
+return false; // Runs until you release the button
+}
+}
+

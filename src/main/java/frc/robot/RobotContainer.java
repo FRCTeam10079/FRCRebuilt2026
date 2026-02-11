@@ -109,21 +109,28 @@ public class RobotContainer {
         .whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT));
 
     // Y button - Reset Heading
-    m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+    m_driverController.y().onTrue(drivsetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
     // Right Trigger - Run Indexer Forward (Intake/Feed)
-
+    // Feeder = 3000 RPM, Spindexer = 1000 RPM (Tune these in Constants!)
     m_driverController
-        .rightTrigger(0.5)
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kForwardSpeed)
-            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+    .rightTrigger(0.5)
+    .whileTrue(new RunIndexer(
+    indexer,
+    Constants.IndexerConstants.kFeederTargetRPM,
+    Constants.IndexerConstants.kSpindexerTargetRPM
+    ).withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
 
     // B Button - Run Indexer Reverse (Unjam)
-
+    // Both run backwards
     m_driverController
-        .b()
-        .whileTrue(new RunIndexer(indexer, Constants.IndexerConstants.kReverseSpeed)
-            .withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+    .b()
+    .whileTrue(new RunIndexer(
+    indexer,
+    Constants.IndexerConstants.kFeederReverseRPM,
+    Constants.IndexerConstants.kSpindexerReverseRPM
+    ).withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming));
+
     // ==================== SLOW MODE ====================
     // Left trigger - Hold for slow mode (useful for precise positioning/scoring)
     m_driverController
