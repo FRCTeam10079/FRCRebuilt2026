@@ -109,7 +109,7 @@ public class RobotContainer {
         .whileTrue(new AlignToAprilTag(drivetrain, limelight, AlignPosition.RIGHT));
 
     // Y button - Reset Heading
-    m_driverController.y().onTrue(drivsetrain.runOnce(() -> drivetrain.seedFieldCentric()));
+    m_driverController.y().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
     // Right Trigger - Run Indexer Forward (Intake/Feed)
     // Feeder = 3000 RPM, Spindexer = 1000 RPM (Tune these in Constants!)

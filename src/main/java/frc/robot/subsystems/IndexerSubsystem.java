@@ -47,7 +47,7 @@ m_feederMotor.getConfigurator().apply(feederConfig);
 // Spindexer config
 TalonFXConfiguration spindexerConfig = new TalonFXConfiguration();
 
-// Safety (Same limits, but seperate config object)
+// Safety (Same limits, but distinct config object)
 spindexerConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit;
 spindexerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
 spindexerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
@@ -69,4 +69,21 @@ m_spindexerMotor.getConfigurator().apply(spindexerConfig);
 * Sets the speeds of both indexer motors independently.
 *
 * @param feederRPM Target RPM for the fast feeder wheel
-* @param spindexerRPM Target RPM for the floor/spind
+* @param spindexerRPM Target RPM for the floor/spindexer wheel
+*/
+
+public void setSpeeds(double feederRPM, double spindexerRPM) {
+    // 1. Convert RPM to RPS (Phoenix 6 uses Rotations Per Second)
+    double feederRPS = feederRPM / 60.0;
+    double spindexerRPS = spindexerRPM / 60.0;
+
+    // 2. Send commands to motors
+    m_feederMotor.setControl(m_feederRequest.withVelocity(feederRPS));
+    m_spindexerMotor.setControl(m_spindexerRequest.withVelocity(spindexerRPS));
+}
+
+public void stop() {
+m_feederMotor.stopMotor();
+m_spindexerMotor.stopMotor();
+}
+}
