@@ -9,9 +9,12 @@ package frc.robot;
  * configuration
  */
 public final class Constants {
+  private Constants() {}
 
   /** Game timing constants for REBUILT */
   public static final class GameConstants {
+    private GameConstants() {}
+
     // Match period durations (seconds)
     public static final double AUTO_DURATION = 20.0; // 0:00 - 0:20
     public static final double TELEOP_DURATION = 150.0; // 2:30 total
@@ -37,6 +40,8 @@ public final class Constants {
 
   /** Controller port assignments */
   public static final class ControllerConstants {
+    private ControllerConstants() {}
+
     public static final int DRIVER_CONTROLLER_PORT = 0;
     public static final int OPERATOR_CONTROLLER_PORT = 1;
 
@@ -46,6 +51,8 @@ public final class Constants {
 
   /** Drivetrain constants */
   public static final class DrivetrainConstants {
+    private DrivetrainConstants() {}
+
     // ==================== SPEEDS ====================
     // These are the ABSOLUTE maximums - derived from TunerConstants.kSpeedAt12Volts
     // The robot physically cannot exceed these values
@@ -91,6 +98,8 @@ public final class Constants {
 
   /** Intake constants (placeholder) */
   public static final class IntakeConstants {
+    private IntakeConstants() {}
+
     public static final double INTAKE_SPEED = -0.5;
     public static final int INTAKE_MOTOR_ID = 19; // TODO: Make real
     public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
@@ -106,6 +115,9 @@ public final class Constants {
    * (slave inverted)
    */
   public static final class ShooterConstants {
+    private ShooterConstants() {}
+
+    // Target RPM values (will vary based on distance)
     // CAN IDs for shooter motors
     public static final int MASTER_MOTOR_ID = 18; // TODO: Set actual CAN ID
     public static final int SLAVE_MOTOR_ID = 21; // TODO: Set actual CAN ID
@@ -133,6 +145,8 @@ public final class Constants {
 
   /** Climber constants (placeholder) */
   public static final class ClimberConstants {
+    private ClimberConstants() {}
+
     // Climber arm positions (encoder units - fill in with actual values later)
     public static final double CLIMBER_STOWED_POSITION = 0;
     public static final double CLIMBER_L1_REACH_POSITION = 50;
@@ -169,6 +183,8 @@ public final class Constants {
 
   /** State machine timing constants */
   public static final class StateMachineConstants {
+    private StateMachineConstants() {}
+
     // Rumble feedback durations (seconds)
     public static final double RUMBLE_SHORT = 0.15;
     public static final double RUMBLE_MEDIUM = 0.3;
@@ -190,6 +206,8 @@ public final class Constants {
 
   /** Vision/Limelight constants (placeholder) */
   public static final class VisionConstants {
+    private VisionConstants() {}
+
     public static final String LIMELIGHT_NAME = "limelight";
 
     // Pipeline IDs
@@ -249,6 +267,7 @@ public final class Constants {
   }
 
   public static final class IndexerConstants {
+    private IndexerConstants() {}
 
     public static final int kFeederMotorID = 20; // This ID confirmed
     public static final int kSpindexerMotorID = 15; // This id not confirmed
@@ -300,11 +319,13 @@ public final class Constants {
   // ==================== APRIL TAG FIELD LAYOUT ====================
 
   /**
-   * AprilTag positions on the field
-   *
-   * <p>Format: HashMap<TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}>
+   * AprilTag positions on the field <br>
+   * Format: <code>
+   * HashMap&lt;TagID, double[]{X_inches, Y_inches, Z_inches, Yaw_degrees, Pitch_degrees}&rt;</code>
    */
   public static final class AprilTagMaps {
+    private AprilTagMaps() {}
+
     public static final java.util.HashMap<Integer, double[]> aprilTagMap =
         new java.util.HashMap<>();
 
