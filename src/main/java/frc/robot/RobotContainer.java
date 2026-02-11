@@ -6,10 +6,13 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.AlignPosition;
 import frc.robot.commands.AlignToAprilTag;
 import frc.robot.commands.RunIndexer;
@@ -19,6 +22,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
 
 /**
  * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
@@ -42,7 +46,9 @@ public class RobotContainer {
   // Indexer
   private final IndexerSubsystem indexer = new IndexerSubsystem();
 
+  // Mechanisms
   public final IntakeSubsystem intake = new IntakeSubsystem();
+  public final ShooterSubsystem shooter = new ShooterSubsystem();
 
   private final Telemetry m_telemetry =
       new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
@@ -141,7 +147,6 @@ public class RobotContainer {
     m_driverController
         .x()
         .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
-    // TODO: Add shooter controls
     // TODO: Add climb controls
 
     // ==================== PATHFINDING CONTROLS ====================
@@ -152,6 +157,45 @@ public class RobotContainer {
     // B button - Pathfind to AprilTag 18 (Blue Alliance Hub Face)
     // Alternative hub for testing/blue alliance
     m_driverController.b().whileTrue(drivetrain.pathfindToAprilTag(18));
+
+    // ==================== OPERATOR (TEST) CONTROLS ====================
+    // Heading Lock to 0 degrees
+    // Hold X to lock heading to 0 degrees (facing opponent alliance wall)
+    m_operatorController
+        .x()
+        .whileTrue(drivetrain.headingLockedDriveCommand(
+            () -> m_driverController.getLeftY(),
+            () -> m_driverController.getLeftX(),
+            0.0, // Lock to 0 degrees
+            Constants.DrivetrainConstants.MAX_SPEED_MPS,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+
+    // Heading Lock to face AprilTag
+    // Hold right trigger to lock heading toward visible AprilTag
+    // Uses limelight TX to compute target heading dynamically
+    m_operatorController
+        .rightTrigger(0.5)
+        .whileTrue(drivetrain.headingLockedDriveCommand(
+            () -> m_driverController.getLeftY(),
+            () -> m_driverController.getLeftX(),
+            () -> computeAprilTagHeading(), // Dynamic heading from Limelight
+            Constants.DrivetrainConstants.MAX_SPEED_MPS,
+            Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
+
+    // Shooter Spin-Up Test
+    // Hold Left Trigger to spin up shooter - controller will rumble when stable
+    // This is so that we can test the debounced isReady() logic
+    m_operatorController
+        .leftTrigger()
+        .whileTrue(shooter.holdRPMCommand(Constants.ShooterConstants.SHOOTER_SPINUP_RPM));
+
+    // Trigger-based rumble: rumble controller when shooter is ready
+    new Trigger(shooter::isReady)
+        .and(m_operatorController.leftTrigger()) // Only rumble while Left Trigger is held
+        .onTrue(Commands.runOnce(
+            () -> m_operatorController.getHID().setRumble(RumbleType.kBothRumble, 0.8)))
+        .onFalse(Commands.runOnce(
+            () -> m_operatorController.getHID().setRumble(RumbleType.kBothRumble, 0.0)));
 
     // ==================== STATE MACHINE EXAMPLES ====================
     // Example: Manual state transitions (add your actual bindings)
@@ -188,5 +232,27 @@ public class RobotContainer {
 
     // Return pathfinding command to AprilTag 10
     return drivetrain.pathfindToAprilTag10().withName("Auto: Pathfind to Tag 10");
+  }
+
+  /**
+   * Compute the target heading to face the currently visible AprilTag.
+   *
+   * <p>If a tag is visible, returns current heading - TX (to center the tag). If no tag visible,
+   * returns the current heading (maintain position).
+   *
+   * <p>This is used by the heading lock test to dynamically track AprilTags.
+   */
+  private double computeAprilTagHeading() {
+    if (limelight.hasTarget()) {
+      // Target heading = current heading - TX (TX positive means target to the right)
+      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+      double tx = limelight.getTx();
+      double targetHeading = currentHeading - tx;
+      return MathUtil.inputModulus(targetHeading, -180.0, 180.0);
+    } else {
+      // No tag visible - maintain current heading
+      double currentHeading = drivetrain.getState().Pose.getRotation().getDegrees();
+      return MathUtil.inputModulus(currentHeading, -180.0, 180.0);
+    }
   }
 }
