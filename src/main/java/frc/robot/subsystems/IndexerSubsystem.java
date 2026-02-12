@@ -1,6 +1,8 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -9,52 +11,79 @@ import frc.robot.generated.TunerConstants;
 
 public class IndexerSubsystem extends SubsystemBase {
 
-  private final TalonFX feederMotor;
-  // private final TalonFX spindexerMotor; // Follower commented out to see if it helps with issues
+// Two independent motors
+private final TalonFX m_feederMotor;
+private final TalonFX m_spindexerMotor;
 
-  public IndexerSubsystem() {
-    // Use the generated CANBus instance instead of the deprecated String-based constructor
-    feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
-    // spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus); // Commented out
-    // to see if it helps with issues
+// Two independent control requests (allows us to send different speeds)
+private final VelocityVoltage m_feederRequest = new VelocityVoltage(0).withSlot(0);
+private final VelocityVoltage m_spindexerRequest = new VelocityVoltage(0).withSlot(0);
 
-    TalonFXConfiguration config = new TalonFXConfiguration();
+public IndexerSubsystem() {
+// Initialize Hardware
+m_feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
+m_spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, TunerConstants.kCANBus);
 
-    // Stator Current Limit
-    config.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit; // 40A
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
+// Feeder config
+TalonFXConfiguration feederConfig = new TalonFXConfiguration();
 
-    // Supply limit
-    // Prevents the motor from drawing too much from   the battery and browning out the robot.
-    config.CurrentLimits.SupplyCurrentLimit = 40; // 30 Amps from battery
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+// Safety
+feederConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit;
+feederConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+feederConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-    // Ramp rate for protection
-    config.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0; // 0.25 seconds to full speed
-    config.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0;
+// Feeder PID (Uses Feeder Constants)
+feederConfig.Slot0 = new Slot0Configs()
+.withKP(IndexerConstants.kFeederKP)
+.withKI(IndexerConstants.kFeederKI)
+.withKD(IndexerConstants.kFeederKD)
+.withKS(IndexerConstants.kFeederKS)
+.withKV(IndexerConstants.kFeederKV)
+.withKA(IndexerConstants.kFeederKA)
+.withKG(IndexerConstants.kFeederKG);
 
-    // Brake Mode
-    config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+m_feederMotor.getConfigurator().apply(feederConfig);
 
-    // Apply config to the LEADER
-    feederMotor.getConfigurator().apply(config);
+// Spindexer config
+TalonFXConfiguration spindexerConfig = new TalonFXConfiguration();
 
-    // Configure the FOLLOWER
-    // We apply the same safety config to the follower too, just to be safe.
-    // Commented out to see if it helps with issues
-    // spindexerMotor.getConfigurator().apply(config);
+// Safety (Same limits, but distinct config object)
+spindexerConfig.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit;
+spindexerConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+spindexerConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-    // Tell the follower to listen to the leader
-    // Commented out to see if it helps with issues
-    // spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID, false));
-  }
+// Spindexer PID (Uses Spindexer Constants)
+spindexerConfig.Slot0 = new Slot0Configs()
+.withKP(IndexerConstants.kSpindexerKP)
+.withKI(IndexerConstants.kSpindexerKI)
+.withKD(IndexerConstants.kSpindexerKD)
+.withKS(IndexerConstants.kSpindexerKS) // Higher friction helper
+.withKV(IndexerConstants.kSpindexerKV)
+.withKA(IndexerConstants.kSpindexerKA)
+.withKG(IndexerConstants.kSpindexerKG);
 
-  public void setSpeed(double speed) {
-    // Only command the leader, follow does it automatically
-    feederMotor.set(speed);
-  }
+m_spindexerMotor.getConfigurator().apply(spindexerConfig);
+}
 
-  public void stop() {
-    feederMotor.stopMotor();
-  }
+/**
+* Sets the speeds of both indexer motors independently.
+*
+* @param feederRPM Target RPM for the fast feeder wheel
+* @param spindexerRPM Target RPM for the floor/spindexer wheel
+*/
+
+public void setSpeeds(double feederRPM, double spindexerRPM) {
+    // 1. Convert RPM to RPS (Phoenix 6 uses Rotations Per Second)
+    double feederRPS = feederRPM / 60.0;
+    double spindexerRPS = spindexerRPM / 60.0;
+
+    // 2. Send commands to motors
+    m_feederMotor.setControl(m_feederRequest.withVelocity(feederRPS));
+    m_spindexerMotor.setControl(m_spindexerRequest.withVelocity(spindexerRPS));
+}
+
+public void stop() {
+m_feederMotor.stopMotor();
+m_spindexerMotor.stopMotor();
+}
 }
