@@ -29,7 +29,9 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.LimelightHelpers;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.subsystems.SwerveHeadingController.HeadingControllerState;
 import java.util.Optional;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -68,6 +70,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    */
   private double teleopVelocityCoefficient = 1.0;
   private double rotationVelocityCoefficient = 1.0;
+
+  // ==================== HEADING CONTROLLER ====================
+  private final SwerveHeadingController m_headingController = new SwerveHeadingController();
+  private boolean m_headingLockEnabled = false;
+  private double m_headingLockTarget = 0.0;
 
   /** Swerve request to apply during robot-centric path following */
   private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds =
@@ -612,6 +619,163 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         rotationInputSupplier.get(),
         maxVelocity,
         maxAngularVelocity));
+  }
+
+  // ==================== HEADING LOCK CONTROL ====================
+
+  /** Get the heading controller for external configuration */
+  public SwerveHeadingController getHeadingController() {
+    return m_headingController;
+  }
+
+  /**
+   * Enable heading lock mode with a specific target heading. In this mode, the robot will
+   * automatically rotate to face the target heading while still allowing the driver to control
+   * translation.
+   *
+   * @param targetDegrees The target heading in degrees (field-relative)
+   */
+  public void enableHeadingLock(double targetDegrees) {
+    m_headingLockEnabled = true;
+    m_headingLockTarget = targetDegrees;
+    m_headingController.setGoal(targetDegrees);
+    m_headingController.setHeadingControllerState(HeadingControllerState.SNAP);
+  }
+
+  /** Update the target heading without resetting the controller state */
+  public void updateHeadingLockTarget(double targetDegrees) {
+    m_headingLockTarget = targetDegrees;
+    m_headingController.setGoal(targetDegrees);
+  }
+
+  /** Disable heading lock mode */
+  public void disableHeadingLock() {
+    m_headingLockEnabled = false;
+    m_headingController.setHeadingControllerState(HeadingControllerState.OFF);
+  }
+
+  /**
+   * Check if the robot is currently locked to the target heading within tolerance
+   *
+   * @return true if heading lock is enabled and robot is at target
+   */
+  public boolean isHeadingLocked() {
+    return m_headingLockEnabled && m_headingController.isAtGoal();
+  }
+
+  /**
+   * Get the current heading lock target
+   *
+   * @return Target heading in degrees
+   */
+  public double getHeadingLockTarget() {
+    return m_headingLockTarget;
+  }
+
+  /**
+   * Apply field-centric driving WITH heading lock.
+   *
+   * <p>The driver controls translation (X/Y), but rotation is automatically controlled by the
+   * heading controller to maintain the locked heading. This creates a "turret mode" where the robot
+   * faces a specific direction regardless of how the driver is strafing.
+   *
+   * @param xInput Raw X joystick input (-1 to 1)
+   * @param yInput Raw Y joystick input (-1 to 1)
+   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param maxAngularVelocity Maximum angular velocity (rad/s)
+   */
+  public void driveWithHeadingLock(
+      double xInput, double yInput, double maxVelocity, double maxAngularVelocity) {
+
+    // Apply deadband to translation inputs
+    double xMagnitude = MathUtil.applyDeadband(xInput, CONTROLLER_DEADBAND);
+    double yMagnitude = MathUtil.applyDeadband(yInput, CONTROLLER_DEADBAND);
+
+    // Calculate translation velocities (flip for alliance)
+    boolean isBlueAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
+    double xVelocity =
+        (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * teleopVelocityCoefficient;
+    double yVelocity =
+        (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * teleopVelocityCoefficient;
+
+    // Get current heading
+    double currentHeadingDegrees = getState().Pose.getRotation().getDegrees();
+
+    // Calculate rotation output from heading controller (-1 to 1)
+    double rotationOutput = m_headingController.update(currentHeadingDegrees);
+
+    // Convert to angular velocity
+    double angularVelocity = rotationOutput * maxAngularVelocity;
+
+    // Apply skew compensation
+    ChassisSpeeds compensatedSpeeds =
+        calculateSpeedsWithSkewCompensation(xVelocity, yVelocity, angularVelocity);
+
+    // Apply to drivetrain
+    setControl(m_fieldCentricRequest.withSpeeds(compensatedSpeeds));
+
+    // Log heading controller telemetry
+    m_headingController.logTelemetry(currentHeadingDegrees);
+  }
+
+  /**
+   * Creates a command for heading-locked driving.
+   *
+   * <p>The driver controls translation with the left stick, but the robot automatically rotates to
+   * face the specified target heading.
+   *
+   * @param xInputSupplier Supplier for X joystick input
+   * @param yInputSupplier Supplier for Y joystick input
+   * @param targetHeadingSupplier Supplier for target heading in degrees
+   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param maxAngularVelocity Maximum angular velocity (rad/s)
+   * @return Command that applies heading-locked driving
+   */
+  public Command headingLockedDriveCommand(
+      DoubleSupplier xInputSupplier,
+      DoubleSupplier yInputSupplier,
+      DoubleSupplier targetHeadingSupplier,
+      double maxVelocity,
+      double maxAngularVelocity) {
+
+    return run(() -> {
+          // Update target heading each loop (allows dynamic targeting like AprilTag
+          // tracking)
+          double targetHeading = targetHeadingSupplier.getAsDouble();
+          if (!m_headingLockEnabled) {
+            enableHeadingLock(targetHeading);
+          } else {
+            updateHeadingLockTarget(targetHeading);
+          }
+
+          driveWithHeadingLock(
+              xInputSupplier.getAsDouble(),
+              yInputSupplier.getAsDouble(),
+              maxVelocity,
+              maxAngularVelocity);
+        })
+        .finallyDo(this::disableHeadingLock);
+  }
+
+  /**
+   * Creates a command for heading-locked driving to a FIXED heading.
+   *
+   * @param xInputSupplier Supplier for X joystick input
+   * @param yInputSupplier Supplier for Y joystick input
+   * @param fixedTargetHeading Fixed target heading in degrees
+   * @param maxVelocity Maximum translation velocity (m/s)
+   * @param maxAngularVelocity Maximum angular velocity (rad/s)
+   * @return Command that applies heading-locked driving to the fixed heading
+   */
+  public Command headingLockedDriveCommand(
+      DoubleSupplier xInputSupplier,
+      DoubleSupplier yInputSupplier,
+      double fixedTargetHeading,
+      double maxVelocity,
+      double maxAngularVelocity) {
+
+    return headingLockedDriveCommand(
+        xInputSupplier, yInputSupplier, () -> fixedTargetHeading, maxVelocity, maxAngularVelocity);
   }
 
   // ==================== PATHFINDING COMMANDS ====================

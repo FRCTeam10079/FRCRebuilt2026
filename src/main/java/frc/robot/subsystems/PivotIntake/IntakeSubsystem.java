@@ -13,8 +13,10 @@ import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
-  private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
+  private final TalonFX intakeMotor =
+      new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
+  private final VelocityVoltage m_velocityRequest =
+      new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
 
   public IntakeSubsystem() {
     configureIntakeMotor();
@@ -30,8 +32,7 @@ public class IntakeSubsystem extends SubsystemBase {
     config.CurrentLimits.StatorCurrentLimit = IntakeConstants.Wheels.STATOR_CURRENT_LIMIT;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
 
-    config.Slot0 = config.Slot0
-        .withKA(IntakeConstants.Wheels.KA)
+    config.Slot0 = config.Slot0.withKA(IntakeConstants.Wheels.KA)
         .withKV(IntakeConstants.Wheels.KV)
         .withKD(IntakeConstants.Wheels.KD)
         .withKS(IntakeConstants.Wheels.KS)
@@ -43,7 +44,8 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void intakeIn() {
     // conversion of RPM to RPS
-    intakeMotor.setControl(m_velocityRequest.withVelocity(IntakeConstants.Wheels.INTAKE_RPM * 60.0));
+    intakeMotor.setControl(
+        m_velocityRequest.withVelocity(IntakeConstants.Wheels.INTAKE_RPM * 60.0));
   }
 
   public void stop() {
