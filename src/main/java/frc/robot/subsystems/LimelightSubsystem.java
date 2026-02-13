@@ -114,6 +114,10 @@ public class LimelightSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
+    if (getBotPose().length == 0) {
+      System.err.println("Limelight network table is empty");
+      return;
+    }
     // Update SmartDashboard with vision data
     SmartDashboard.putNumber("Limelight/TX", getTx());
     SmartDashboard.putNumber("Limelight/TY", getTy());

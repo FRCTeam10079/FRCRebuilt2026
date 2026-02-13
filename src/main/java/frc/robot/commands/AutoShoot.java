@@ -29,10 +29,10 @@ public class AutoShoot extends Command {
     double distance = m_limelight.getDistanceToGoal();
 
     // 3. Calculate RPM
-    double targetRpm = m_shooter.getRpmForDistance(distance);
+    double targetRpm = m_shooter.getRPMForDistance(distance);
 
     // 4. Set Shooter
-    m_shooter.setTargetRpm(targetRpm);
+    m_shooter.setTargetRPM(targetRpm);
   }
 
   @Override

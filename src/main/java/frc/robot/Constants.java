@@ -114,7 +114,7 @@ public final class Constants {
     public static final double FEEDER_SPEED = 1.0;
 
     // Motor CAN IDs (Placeholder values - replace with actual IDs)
-    public static final int MASTER_MOTOR_ID = 30; // Placeholder ID
+    public static final int MASTER_MOTOR_ID = 18; // Placeholder ID
     public static final int SLAVE_MOTOR_ID = 31; // Placeholder ID
 
     // PID Constants (Tune these!)
@@ -188,8 +188,8 @@ public final class Constants {
 
     // Pipeline IDs
     public static final int PIPELINE_HUB_TRACKING = 0;
-    public static final int PIPELINE_FUEL_DETECTION = 1;
-    public static final int PIPELINE_APRILTAG = 2;
+    public static final int PIPELINE_FUEL_DETECTION = 0;
+    public static final int PIPELINE_APRILTAG = 0;
 
     // Target height for hub (inches from floor)
     public static final double HUB_TARGET_HEIGHT_INCHES = 104.0; // Placeholder
