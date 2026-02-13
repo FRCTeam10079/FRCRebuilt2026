@@ -358,13 +358,9 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Update alliance color from DriverStation */
   public void updateAlliance() {
-    if (DriverStation.getAlliance().isPresent()) {
-      alliance = DriverStation.getAlliance().get() == Alliance.Red
-          ? AllianceColor.RED
-          : AllianceColor.BLUE;
-    } else {
-      alliance = AllianceColor.UNKNOWN;
-    }
+    alliance = DriverStation.getAlliance().isPresent()
+        ? DriverStation.getAlliance().get() == Alliance.Red ? AllianceColor.RED : AllianceColor.BLUE
+        : AllianceColor.UNKNOWN;
   }
 
   /** Transition to new match state */
@@ -533,6 +529,7 @@ public class RobotStateMachine extends SubsystemBase {
    */
   public boolean isTransitionPeriod() {
     if (!DriverStation.isTeleopEnabled()) return false;
+
     double matchTime = DriverStation.getMatchTime();
     // Transition is typically at the start of teleop (2:30-2:20, so match time
     // 150-140)
@@ -541,36 +538,23 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Automatic period detection */
   private void checkPeriodTransitions() {
-    if (matchState == MatchState.TELEOP_RUNNING) {
-      // Check for endgame
-      if (isEndgamePeriod() && matchState != MatchState.ENDGAME) {
-        setMatchState(MatchState.ENDGAME);
-      }
-      // Check for transition shift period
-      else if (isTransitionPeriod() && matchState != MatchState.TRANSITION_SHIFT) {
-        setMatchState(MatchState.TRANSITION_SHIFT);
-      }
+    if (matchState != MatchState.TELEOP_RUNNING) return;
+
+    // Check for endgame
+    if (isEndgamePeriod() && matchState != MatchState.ENDGAME) {
+      setMatchState(MatchState.ENDGAME);
+    }
+    // Check for transition shift period
+    else if (isTransitionPeriod() && matchState != MatchState.TRANSITION_SHIFT) {
+      setMatchState(MatchState.TRANSITION_SHIFT);
     }
   }
 
   /** State validation - prevent invalid transitions */
   public boolean canTransitionTo(GameState newState) {
-    // Disabled can only be IDLE
-    if (matchState == MatchState.DISABLED && newState != GameState.IDLE) {
-      return false;
-    }
-
-    // Auto states only in auto
-    if (newState.isAuto() && !matchState.autonomous) {
-      return false;
-    }
-
-    // Can always emergency stop
-    if (newState == GameState.EMERGENCY_STOP) {
-      return true;
-    }
-
-    return true;
+    // Disabled can only transition to IDLE
+    return !(matchState == MatchState.DISABLED && newState != GameState.IDLE)
+        && !(newState.isAuto() && !matchState.autonomous); // Auto states only in auto
   }
 
   /** Safe state transition with validation */
@@ -784,34 +768,34 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Set fuel state with automatic driver feedback */
   public void setFuelState(FuelState newState) {
-    if (fuelState != newState) {
-      FuelState previousState = fuelState;
-      fuelState = newState;
+    if (fuelState == newState) return;
 
-      addToStateHistory("Fuel", previousState.name(), newState.name());
-      SmartDashboard.putString("Fuel State", newState.name());
+    FuelState previousState = fuelState;
+    fuelState = newState;
 
-      // Driver feedback on transitions
-      switch (newState) {
-        case LOADED:
-          rumbleDriver(0.3, 0.2); // Short rumble - fuel collected
-          intakeCyclesCompleted++;
-          break;
-        case EMPTY:
-          if (previousState == FuelState.FIRING) {
-            rumbleDriver(1.0, 0.5); // Strong rumble - scored!
-            if (isAutonomous()) {
-              fuelScoredAuto += fuelCount; // All fuel was scored
-            } else {
-              fuelScoredTeleop += fuelCount;
-            }
-            scoringCyclesCompleted++;
-            updateCycleTime();
+    addToStateHistory("Fuel", previousState.name(), newState.name());
+    SmartDashboard.putString("Fuel State", newState.name());
+
+    // Driver feedback on transitions
+    switch (newState) {
+      case LOADED:
+        rumbleDriver(0.3, 0.2); // Short rumble - fuel collected
+        intakeCyclesCompleted++;
+        break;
+      case EMPTY:
+        if (previousState == FuelState.FIRING) {
+          rumbleDriver(1.0, 0.5); // Strong rumble - scored!
+          if (isAutonomous()) {
+            fuelScoredAuto += fuelCount; // All fuel was scored
+          } else {
+            fuelScoredTeleop += fuelCount;
           }
-          break;
-        default:
-          break;
-      }
+          scoringCyclesCompleted++;
+          updateCycleTime();
+        }
+        break;
+      default:
+        break;
     }
   }
 
@@ -841,20 +825,20 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Set climb state */
   public void setClimbState(ClimbState newState) {
-    if (climbState != newState) {
-      ClimbState previousState = climbState;
-      climbState = newState;
-      addToStateHistory("Climb", previousState.name(), newState.name());
-      SmartDashboard.putString("Climb State", newState.name());
+    if (climbState == newState) return;
 
-      // Feedback on climb completion
-      if (newState == ClimbState.ENGAGED_BRAKE) {
-        rumbleDriver(1.0, 1.0); // Strong, long rumble - climb complete!
-        System.out.println("=== CLIMB COMPLETE - BRAKE ENGAGED ===");
-      } else if (newState == ClimbState.CLIMB_FAILED) {
-        rumbleDriver(0.5, 0.5); // Alert: climb failed
-        System.out.println("!!! CLIMB FAILED - RECOVERY NEEDED !!!");
-      }
+    ClimbState previousState = climbState;
+    climbState = newState;
+    addToStateHistory("Climb", previousState.name(), newState.name());
+    SmartDashboard.putString("Climb State", newState.name());
+
+    // Feedback on climb completion
+    if (newState == ClimbState.ENGAGED_BRAKE) {
+      rumbleDriver(1.0, 1.0); // Strong, long rumble - climb complete!
+      System.out.println("=== CLIMB COMPLETE - BRAKE ENGAGED ===");
+    } else if (newState == ClimbState.CLIMB_FAILED) {
+      rumbleDriver(0.5, 0.5); // Alert: climb failed
+      System.out.println("!!! CLIMB FAILED - RECOVERY NEEDED !!!");
     }
   }
 
@@ -951,11 +935,7 @@ public class RobotStateMachine extends SubsystemBase {
   }
 
   public double getFastestCycleTime() {
-    if (fastestCycleTime == Double.MAX_VALUE) {
-      return 0;
-    } else {
-      return fastestCycleTime;
-    }
+    return fastestCycleTime == Double.MAX_VALUE ? 0 : fastestCycleTime;
   }
 
   /** Reset cycle counters (call at match start) */
@@ -973,7 +953,8 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Get match elapsed time */
   public double getMatchElapsedTime() {
-    if (matchStartTime == 0) return 0;
-    return edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - matchStartTime;
+    return matchStartTime == 0
+        ? 0
+        : edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - matchStartTime;
   }
 }

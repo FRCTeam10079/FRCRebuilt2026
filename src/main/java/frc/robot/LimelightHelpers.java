@@ -21,8 +21,6 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.TimestampedDoubleArray;
-import frc.robot.LimelightHelpers.LimelightResults;
-import frc.robot.LimelightHelpers.PoseEstimate;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -738,7 +736,8 @@ public class LimelightHelpers {
       if (this == obj) return true;
       if (obj == null || getClass() != obj.getClass()) return false;
       PoseEstimate that = (PoseEstimate) obj;
-      // We don't compare the timestampSeconds as it isn't relevant for equality and makes
+      // We don't compare the timestampSeconds as it isn't relevant for equality and
+      // makes
       // unit testing harder
       return Double.compare(that.latency, latency) == 0
           && tagCount == that.tagCount
@@ -869,10 +868,7 @@ public class LimelightHelpers {
   }
 
   private static double extractArrayEntry(double[] inData, int position) {
-    if (inData.length < position + 1) {
-      return 0;
-    }
-    return inData[position];
+    return inData.length < position + 1 ? 0 : inData[position];
   }
 
   private static PoseEstimate getBotPoseEstimate(
@@ -981,7 +977,7 @@ public class LimelightHelpers {
     }
 
     int numDetections = rawDetectionArray.length / valsPerEntry;
-    RawDetection[] rawDetections = new RawDetection[numDetections];
+    var rawDetections = new RawDetection[numDetections];
 
     for (int i = 0; i < numDetections; i++) {
       int baseIndex = i * valsPerEntry; // Starting index for this detection's data
@@ -1828,17 +1824,13 @@ public class LimelightHelpers {
     int d = 0; // pipeline
     if (downscale == 1.0) {
       d = 1;
-    }
-    if (downscale == 1.5) {
+    } else if (downscale == 1.5) {
       d = 2;
-    }
-    if (downscale == 2) {
+    } else if (downscale == 2) {
       d = 3;
-    }
-    if (downscale == 3) {
+    } else if (downscale == 3) {
       d = 4;
-    }
-    if (downscale == 4) {
+    } else if (downscale == 4) {
       d = 5;
     }
     setLimelightNTDouble(limelightName, "fiducial_downscale_set", d);
@@ -1933,7 +1925,7 @@ public class LimelightHelpers {
   public static LimelightResults getLatestResults(String limelightName) {
 
     long start = System.nanoTime();
-    LimelightHelpers.LimelightResults results = new LimelightHelpers.LimelightResults();
+    var results = new LimelightHelpers.LimelightResults();
     if (mapper == null) {
       mapper =
           new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
