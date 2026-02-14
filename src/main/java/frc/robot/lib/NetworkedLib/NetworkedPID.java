@@ -11,9 +11,9 @@ public class NetworkedPID extends PIDController {
 
   private String name;
 
-  private NetworkedDouble networkedKp;
-  private NetworkedDouble networkedKi;
-  private NetworkedDouble networkedKd;
+  private NetworkedDouble networkedKP;
+  private NetworkedDouble networkedKI;
+  private NetworkedDouble networkedKD;
   /**
    * Allocates a PIDController with the given constants for kp, ki, and kd and a default period of
    * 0.02 seconds.
@@ -79,9 +79,9 @@ public class NetworkedPID extends PIDController {
   }
 
   private void setupNT(double kp, double ki, double kd) {
-    this.networkedKp = new NetworkedDouble("/NetworkedLib/" + name + "/kp", kp);
-    this.networkedKi = new NetworkedDouble("/NetworkedLib/" + name + "/ki", ki);
-    this.networkedKd = new NetworkedDouble("/NetworkedLib/" + name + "/kd", kd);
+    networkedKP = new NetworkedDouble("/NetworkedLib/" + name + "/kp", kp);
+    networkedKI = new NetworkedDouble("/NetworkedLib/" + name + "/ki", ki);
+    networkedKD = new NetworkedDouble("/NetworkedLib/" + name + "/kd", kd);
   }
 
   /**
@@ -98,6 +98,6 @@ public class NetworkedPID extends PIDController {
 
   /** Updates the current PID with new values */
   public void updatePID() {
-    this.setPID(networkedKp.get(), networkedKi.get(), networkedKd.get());
+    this.setPID(networkedKP.get(), networkedKI.get(), networkedKD.get());
   }
 }
