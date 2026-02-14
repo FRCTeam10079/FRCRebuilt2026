@@ -29,7 +29,6 @@ import frc.robot.subsystems.ShooterSubsystem;
  * and button bindings are defined.
  */
 public class RobotContainer {
-
   // Controllers
   private final CommandXboxController m_driverController = new CommandXboxController(0);
   private final CommandXboxController m_operatorController = new CommandXboxController(1);
@@ -44,7 +43,7 @@ public class RobotContainer {
   // Vision
   public final LimelightSubsystem limelight = new LimelightSubsystem();
   // Indexer
-  private final IndexerSubsystem indexer = new IndexerSubsystem();
+  public final IndexerSubsystem indexer = new IndexerSubsystem();
 
   // Mechanisms
   public final IntakeSubsystem intake = new IntakeSubsystem();

@@ -15,37 +15,39 @@ import java.util.EnumSet;
  * I didn't realize til after making this but NetworkTableEntry might work better here
  */
 public class NetworkedDouble {
-  private DoubleTopic doubleTopic;
-  private DoublePublisher doublePublisher;
-  private DoubleSubscriber doubleSubscriber;
+  private DoubleTopic m_doubleTopic;
+  private DoublePublisher m_doublePublisher;
+  private DoubleSubscriber m_doubleSubscriber;
 
-  private NetworkTableListener doubleListener;
+  private NetworkTableListener m_doubleListener;
 
   // this value is read and written to from multiple threads
-  private volatile boolean newData = false;
+  private volatile boolean m_newData = false;
 
   /**
    * Creates a networkedDouble object
    *
-   * @param topic_string the name of the topic
-   * @param default_value the default double value to set the topic to
+   * @param topicString the name of the topic
+   * @param defaultValue the default double value to set the topic to
    */
-  public NetworkedDouble(String topic_string, double default_value) {
+  public NetworkedDouble(String topicString, double defaultValue) {
     NetworkTableInstance defaultNT = NetworkTableInstance.getDefault();
-    this.doubleTopic = defaultNT.getDoubleTopic(topic_string);
+    m_doubleTopic = defaultNT.getDoubleTopic(topicString);
 
-    this.doublePublisher = doubleTopic.publish();
-    this.doubleSubscriber = doubleTopic.subscribe(default_value);
+    m_doublePublisher = m_doubleTopic.publish();
+    m_doubleSubscriber = m_doubleTopic.subscribe(defaultValue);
 
-    this.doublePublisher.set(default_value);
+    m_doublePublisher.set(defaultValue);
 
     // ONLY detects REMOTE value updates
     // not designed to detect local code changes
-    doubleListener = NetworkTableListener.createListener(
-        doubleTopic, EnumSet.of(NetworkTableEvent.Kind.kValueRemote), (NetworkTableEvent event) -> {
-          // legit just a lambda to make newData true
+    m_doubleListener = NetworkTableListener.createListener(
+        m_doubleTopic,
+        EnumSet.of(NetworkTableEvent.Kind.kValueRemote),
+        (NetworkTableEvent event) -> {
+          // legit just a lambda to make m_newData true
           // hopefully thread safe ♥
-          this.newData = true;
+          m_newData = true;
         });
   }
 
@@ -57,16 +59,14 @@ public class NetworkedDouble {
    * @return
    */
   public boolean available() {
-    if (!this.newData) {
-      return false;
-    }
-    this.newData = false;
+    if (!m_newData) return false;
+    m_newData = false;
     return true;
   }
 
   /** Closes active listeners */
   public void close() {
-    doubleListener.close();
+    m_doubleListener.close();
   }
 
   /**
@@ -75,7 +75,7 @@ public class NetworkedDouble {
    * @param value the value to set
    */
   public void set(double value) {
-    this.doublePublisher.set(value);
+    m_doublePublisher.set(value);
   }
 
   /**
@@ -84,6 +84,6 @@ public class NetworkedDouble {
    * @return the value recieved from the subscriber
    */
   public double get() {
-    return this.doubleSubscriber.get();
+    return m_doubleSubscriber.get();
   }
 }

@@ -33,69 +33,71 @@ import org.json.simple.parser.JSONParser;
  * or goal positions change.
  */
 public class LocalADStar implements Pathfinder {
-
   // AD* algorithm constant (1.0 for standard A* behavior)
   private static final double EPS = 1.0;
 
   // Grid configuration
-  private double nodeSize = PathfindingConstants.NODE_SIZE_METERS;
-  private double fieldLength = PathfindingConstants.FIELD_LENGTH_METERS;
-  private double fieldWidth = PathfindingConstants.FIELD_WIDTH_METERS;
-  private int nodesX;
-  private int nodesY;
+  private double m_nodeSize = PathfindingConstants.NODE_SIZE_METERS;
+  private double m_fieldLength = PathfindingConstants.FIELD_LENGTH_METERS;
+  private double m_fieldWidth = PathfindingConstants.FIELD_WIDTH_METERS;
+  private int m_nodesX;
+  private int m_nodesY;
 
   // AD* data structures
-  private final HashMap<GridPosition, Double> g = new HashMap<>();
-  private final HashMap<GridPosition, Double> rhs = new HashMap<>();
-  private final HashMap<GridPosition, Pair<Double, Double>> open = new HashMap<>();
-  private final HashMap<GridPosition, Pair<Double, Double>> incons = new HashMap<>();
-  private final Set<GridPosition> closed = new HashSet<>();
+  private final HashMap<GridPosition, Double> m_g = new HashMap<>();
+  private final HashMap<GridPosition, Double> m_rhs = new HashMap<>();
+  private final HashMap<GridPosition, Pair<Double, Double>> m_open = new HashMap<>();
+  private final HashMap<GridPosition, Pair<Double, Double>> m_incons = new HashMap<>();
+  private final Set<GridPosition> m_closed = new HashSet<>();
 
-  // Obstacle set (navgrid.json already includes robot buffer - no additional inflation needed)
-  private final Set<GridPosition> obstacles = new HashSet<>();
+  // Obstacle set (navgrid.json already includes robot buffer - no additional
+  // inflation needed)
+  private final Set<GridPosition> m_obstacles = new HashSet<>();
 
   // Request state (protected by lock)
-  private final ReadWriteLock requestLock = new ReentrantReadWriteLock();
-  private GridPosition requestStart = new GridPosition(0, 0);
-  private GridPosition requestGoal = new GridPosition(0, 0);
-  private Pose2d requestRealStartPose = Pose2d.kZero;
-  private Pose2d requestRealGoalPose = Pose2d.kZero;
-  private Translation2d requestStartVelocity = Translation2d.kZero;
-  private boolean requestMinor = false;
-  private boolean requestReset = false;
-  // Track if goal was adjusted from obstacle - if so, don't use realGoalPose for final waypoint
-  private boolean goalWasInObstacle = false;
+  private final ReadWriteLock m_requestLock = new ReentrantReadWriteLock();
+  private GridPosition m_requestStart = new GridPosition(0, 0);
+  private GridPosition m_requestGoal = new GridPosition(0, 0);
+  private Pose2d m_requestRealStartPose = Pose2d.kZero;
+  private Pose2d m_requestRealGoalPose = Pose2d.kZero;
+  private Translation2d m_requestStartVelocity = Translation2d.kZero;
+  private boolean m_requestMinor = false;
+  private boolean m_requestReset = false;
+  // Track if goal was adjusted from obstacle - if so, don't use realGoalPose for
+  // final waypoint
+  private boolean m_goalWasInObstacle = false;
 
   // Path output (thread-safe)
-  private final AtomicReference<List<Translation2d>> currentPathWaypoints =
+  private final AtomicReference<List<Translation2d>> m_currentPathWaypoints =
       new AtomicReference<>(new ArrayList<>());
-  private final AtomicReference<Pose2d> currentGoalPose = new AtomicReference<>(null);
-  private final AtomicBoolean newPathAvailable = new AtomicBoolean(false);
-  private final AtomicBoolean isComputing = new AtomicBoolean(false);
+  private final AtomicReference<Pose2d> m_currentGoalPose = new AtomicReference<>(null);
+  private final AtomicBoolean m_newPathAvailable = new AtomicBoolean(false);
+  private final AtomicBoolean m_isComputing = new AtomicBoolean(false);
 
   // Background thread
-  private final Thread planningThread;
-  private volatile boolean running = true;
+  private final Thread m_planningThread;
+  private volatile boolean m_running = true;
 
   /** Create a new pathfinder that runs AD* locally in a background thread. */
   public LocalADStar() {
-    // Load obstacles from navgrid.json (already includes robot buffer from PathPlanner)
+    // Load obstacles from navgrid.json (already includes robot buffer from
+    // PathPlanner)
     loadObstacles("pathplanner/navgrid.json");
 
     // Calculate grid dimensions
-    nodesX = (int) Math.ceil(fieldLength / nodeSize);
-    nodesY = (int) Math.ceil(fieldWidth / nodeSize);
+    m_nodesX = (int) Math.ceil(m_fieldLength / m_nodeSize);
+    m_nodesY = (int) Math.ceil(m_fieldWidth / m_nodeSize);
 
-    System.out.println("[LocalADStar] Grid: " + nodesX + "x" + nodesY + " nodes");
-    System.out.println("[LocalADStar] Node size: " + nodeSize + "m");
+    System.out.println("[LocalADStar] Grid: " + m_nodesX + "x" + m_nodesY + " nodes");
+    System.out.println("[LocalADStar] Node size: " + m_nodeSize + "m");
     System.out.println(
-        "[LocalADStar] Obstacles: " + obstacles.size() + " cells (from navgrid with buffer)");
+        "[LocalADStar] Obstacles: " + m_obstacles.size() + " cells (from navgrid with buffer)");
 
     // Start background planning thread
-    planningThread = new Thread(this::runThread);
-    planningThread.setDaemon(true);
-    planningThread.setName("ADStar Planning Thread");
-    planningThread.start();
+    m_planningThread = new Thread(this::runThread);
+    m_planningThread.setDaemon(true);
+    m_planningThread.setName("ADStar Planning Thread");
+    m_planningThread.start();
   }
 
   /**
@@ -111,35 +113,35 @@ public class LocalADStar implements Pathfinder {
     }
 
     try (BufferedReader br = new BufferedReader(new FileReader(navGridFile))) {
-      StringBuilder fileContentBuilder = new StringBuilder();
+      var fileContentBuilder = new StringBuilder();
       String line;
       while ((line = br.readLine()) != null) {
         fileContentBuilder.append(line);
       }
 
       String fileContent = fileContentBuilder.toString();
-      JSONObject json = (JSONObject) new JSONParser().parse(fileContent);
+      var json = (JSONObject) new JSONParser().parse(fileContent);
 
       // Read grid configuration
-      nodeSize = ((Number) json.get("nodeSizeMeters")).doubleValue();
+      m_nodeSize = ((Number) json.get("nodeSizeMeters")).doubleValue();
 
-      JSONObject fieldSize = (JSONObject) json.get("field_size");
-      fieldLength = ((Number) fieldSize.get("x")).doubleValue();
-      fieldWidth = ((Number) fieldSize.get("y")).doubleValue();
+      var fieldSize = (JSONObject) json.get("field_size");
+      m_fieldLength = ((Number) fieldSize.get("x")).doubleValue();
+      m_fieldWidth = ((Number) fieldSize.get("y")).doubleValue();
 
       // Read obstacle grid
-      JSONArray grid = (JSONArray) json.get("grid");
-      nodesY = grid.size();
+      var grid = (JSONArray) json.get("grid");
+      m_nodesY = grid.size();
 
       for (int row = 0; row < grid.size(); row++) {
-        JSONArray rowArray = (JSONArray) grid.get(row);
+        var rowArray = (JSONArray) grid.get(row);
         if (row == 0) {
-          nodesX = rowArray.size();
+          m_nodesX = rowArray.size();
         }
         for (int col = 0; col < rowArray.size(); col++) {
           boolean isObstacle = (boolean) rowArray.get(col);
           if (isObstacle) {
-            obstacles.add(new GridPosition(col, row));
+            m_obstacles.add(new GridPosition(col, row));
           }
         }
       }
@@ -151,37 +153,38 @@ public class LocalADStar implements Pathfinder {
     }
   }
 
-  // Note: No inflation needed - PathPlanner's navgrid.json already includes robot buffer
+  // Note: No inflation needed - PathPlanner's navgrid.json already includes robot
+  // buffer
   // ==================== Pathfinder Interface ====================
 
   @Override
   public boolean isNewPathAvailable() {
-    return newPathAvailable.get();
+    return m_newPathAvailable.get();
   }
 
   @Override
   public List<Translation2d> getCurrentPathWaypoints() {
-    newPathAvailable.set(false);
-    return currentPathWaypoints.get();
+    m_newPathAvailable.set(false);
+    return m_currentPathWaypoints.get();
   }
 
   @Override
   public Pose2d getGoalPose() {
-    return currentGoalPose.get();
+    return m_currentGoalPose.get();
   }
 
   @Override
   public void setStartPose(Pose2d startPose) {
     GridPosition startPos = findClosestNonObstacle(getGridPos(startPose.getTranslation()));
-    if (startPos != null && !startPos.equals(requestStart)) {
-      requestLock.writeLock().lock();
+    if (startPos != null && !startPos.equals(m_requestStart)) {
+      m_requestLock.writeLock().lock();
       try {
-        requestStart = startPos;
-        requestRealStartPose = startPose;
-        requestMinor = true;
-        newPathAvailable.set(false);
+        m_requestStart = startPos;
+        m_requestRealStartPose = startPose;
+        m_requestMinor = true;
+        m_newPathAvailable.set(false);
       } finally {
-        requestLock.writeLock().unlock();
+        m_requestLock.writeLock().unlock();
       }
     }
   }
@@ -190,39 +193,39 @@ public class LocalADStar implements Pathfinder {
   public void setGoalPose(Pose2d goalPose) {
     GridPosition gridPos = findClosestNonObstacle(getGridPos(goalPose.getTranslation()));
     if (gridPos != null) {
-      requestLock.writeLock().lock();
+      m_requestLock.writeLock().lock();
       try {
-        requestGoal = gridPos;
-        requestRealGoalPose = goalPose;
-        requestMinor = true;
-        requestReset = true;
-        newPathAvailable.set(false);
-        currentGoalPose.set(goalPose);
+        m_requestGoal = gridPos;
+        m_requestRealGoalPose = goalPose;
+        m_requestMinor = true;
+        m_requestReset = true;
+        m_newPathAvailable.set(false);
+        m_currentGoalPose.set(goalPose);
       } finally {
-        requestLock.writeLock().unlock();
+        m_requestLock.writeLock().unlock();
       }
     }
   }
 
   @Override
   public void setStartVelocity(Translation2d startVelocity) {
-    requestLock.writeLock().lock();
+    m_requestLock.writeLock().lock();
     try {
-      requestStartVelocity = startVelocity;
+      m_requestStartVelocity = startVelocity;
     } finally {
-      requestLock.writeLock().unlock();
+      m_requestLock.writeLock().unlock();
     }
   }
 
   @Override
   public void setProblem(Pose2d startPose, Pose2d goalPose, Translation2d startVelocity) {
-    requestLock.writeLock().lock();
+    m_requestLock.writeLock().lock();
     try {
       // === DEBUG: Raw input poses ===
       System.out.println("\n========== AD* SET PROBLEM DEBUG ==========");
       System.out.println(
-          "[AD*] OBSTACLE CHECK: " + obstacles.size() + " obstacles (from navgrid with buffer)");
-      System.out.println("[AD*] Grid dimensions: " + nodesX + "x" + nodesY);
+          "[AD*] OBSTACLE CHECK: " + m_obstacles.size() + " obstacles (from navgrid with buffer)");
+      System.out.println("[AD*] Grid dimensions: " + m_nodesX + "x" + m_nodesY);
       System.out.println("[AD*] START Pose: (" + String.format("%.3f", startPose.getX()) + ", "
           + String.format("%.3f", startPose.getY()) + ", "
           + String.format("%.1f", startPose.getRotation().getDegrees()) + "°)");
@@ -237,16 +240,17 @@ public class LocalADStar implements Pathfinder {
       System.out.println(
           "[AD*] Raw Start Grid: (" + rawStartGrid.x() + ", " + rawStartGrid.y() + ")");
       System.out.println("[AD*] Raw Goal Grid: (" + rawGoalGrid.x() + ", " + rawGoalGrid.y() + ")");
-      System.out.println("[AD*] Start in obstacle? " + obstacles.contains(rawStartGrid));
-      System.out.println("[AD*] Goal in obstacle? " + obstacles.contains(rawGoalGrid));
+      System.out.println("[AD*] Start in obstacle? " + m_obstacles.contains(rawStartGrid));
+      System.out.println("[AD*] Goal in obstacle? " + m_obstacles.contains(rawGoalGrid));
 
-      // Track if goal is in an obstacle - if so, we'll use the adjusted position for final waypoint
-      goalWasInObstacle = obstacles.contains(rawGoalGrid);
+      // Track if goal is in an obstacle - if so, we'll use the adjusted position for
+      // final waypoint
+      m_goalWasInObstacle = m_obstacles.contains(rawGoalGrid);
 
       GridPosition startPos = findClosestNonObstacle(getGridPos(startPose.getTranslation()));
       if (startPos != null) {
-        requestStart = startPos;
-        requestRealStartPose = startPose;
+        m_requestStart = startPos;
+        m_requestRealStartPose = startPose;
         System.out.println(
             "[AD*] Adjusted Start Grid: (" + startPos.x() + ", " + startPos.y() + ")");
         System.out.println("[AD*] Start Grid → Field: ("
@@ -257,9 +261,9 @@ public class LocalADStar implements Pathfinder {
       }
       GridPosition gridPos = findClosestNonObstacle(getGridPos(goalPose.getTranslation()));
       if (gridPos != null) {
-        requestGoal = gridPos;
-        requestRealGoalPose = goalPose;
-        currentGoalPose.set(goalPose);
+        m_requestGoal = gridPos;
+        m_requestRealGoalPose = goalPose;
+        m_currentGoalPose.set(goalPose);
         System.out.println("[AD*] Adjusted Goal Grid: (" + gridPos.x() + ", " + gridPos.y() + ")");
         System.out.println("[AD*] Goal Grid → Field: ("
             + String.format("%.3f", gridPosToTranslation(gridPos).getX()) + ", "
@@ -267,13 +271,13 @@ public class LocalADStar implements Pathfinder {
       } else {
         System.out.println("[AD*] ERROR: Could not find non-obstacle goal position!");
       }
-      requestStartVelocity = startVelocity;
-      requestMinor = true;
-      requestReset = true;
-      newPathAvailable.set(false);
+      m_requestStartVelocity = startVelocity;
+      m_requestMinor = true;
+      m_requestReset = true;
+      m_newPathAvailable.set(false);
       System.out.println("=========================================\n");
     } finally {
-      requestLock.writeLock().unlock();
+      m_requestLock.writeLock().unlock();
     }
   }
 
@@ -291,13 +295,13 @@ public class LocalADStar implements Pathfinder {
 
   @Override
   public boolean isComputing() {
-    return isComputing.get();
+    return m_isComputing.get();
   }
 
   @Override
   public void shutdown() {
-    running = false;
-    planningThread.interrupt();
+    m_running = false;
+    m_planningThread.interrupt();
   }
 
   // ==================== Background Thread ====================
@@ -306,32 +310,32 @@ public class LocalADStar implements Pathfinder {
   private void runThread() {
     System.out.println("[AD*] Background planning thread started!");
 
-    while (running) {
+    while (m_running) {
       try {
         // Use WRITE lock to safely read AND modify flags
-        requestLock.writeLock().lock();
-        boolean reset = requestReset;
-        boolean minor = requestMinor;
+        m_requestLock.writeLock().lock();
+        boolean reset = m_requestReset;
+        boolean minor = m_requestMinor;
 
         // Clear the flags now that we've read them
         if (reset) {
-          requestReset = false;
+          m_requestReset = false;
         }
         if (minor) {
-          requestMinor = false;
+          m_requestMinor = false;
         }
 
-        GridPosition start = requestStart;
-        GridPosition goal = requestGoal;
-        Pose2d realStart = requestRealStartPose;
-        Pose2d realGoal = requestRealGoalPose;
-        requestLock.writeLock().unlock();
+        GridPosition start = m_requestStart;
+        GridPosition goal = m_requestGoal;
+        Pose2d realStart = m_requestRealStartPose;
+        Pose2d realGoal = m_requestRealGoalPose;
+        m_requestLock.writeLock().unlock();
 
         if (reset || minor) {
           System.out.println("[AD*] Thread processing: reset=" + reset + ", minor=" + minor);
-          isComputing.set(true);
+          m_isComputing.set(true);
           doWork(reset, minor, start, goal, realStart, realGoal);
-          isComputing.set(false);
+          m_isComputing.set(false);
           System.out.println("[AD*] Thread finished computing path");
         } else {
           Thread.sleep(10);
@@ -342,11 +346,11 @@ public class LocalADStar implements Pathfinder {
         System.err.println("[LocalADStar] Error in planning thread: " + e.getMessage());
         e.printStackTrace();
         // Reset and continue
-        requestLock.writeLock().lock();
+        m_requestLock.writeLock().lock();
         try {
-          requestReset = true;
+          m_requestReset = true;
         } finally {
-          requestLock.writeLock().unlock();
+          m_requestLock.writeLock().unlock();
         }
       }
     }
@@ -403,42 +407,42 @@ public class LocalADStar implements Pathfinder {
       System.out.println("================================================\n");
 
       // === PUBLISH TO SMARTDASHBOARD FOR ADVANTAGESCOPE ===
-      SmartDashboard.putNumber("Pathfinding/AD*/Obstacles", obstacles.size());
+      SmartDashboard.putNumber("Pathfinding/AD*/Obstacles", m_obstacles.size());
       SmartDashboard.putNumber("Pathfinding/AD*/GridPathLength", pathPositions.size());
       SmartDashboard.putNumber("Pathfinding/AD*/FinalWaypointCount", waypoints.size());
       SmartDashboard.putBoolean("Pathfinding/AD*/PathFound", waypoints.size() >= 2);
 
-      currentPathWaypoints.set(waypoints);
-      newPathAvailable.set(true);
+      m_currentPathWaypoints.set(waypoints);
+      m_newPathAvailable.set(true);
     }
   }
 
   // ==================== AD* Algorithm ====================
 
   private void reset(GridPosition sStart, GridPosition sGoal) {
-    g.clear();
-    rhs.clear();
-    open.clear();
-    incons.clear();
-    closed.clear();
+    m_g.clear();
+    m_rhs.clear();
+    m_open.clear();
+    m_incons.clear();
+    m_closed.clear();
 
     // Initialize all nodes with infinite cost
-    for (int x = 0; x < nodesX; x++) {
-      for (int y = 0; y < nodesY; y++) {
+    for (int x = 0; x < m_nodesX; x++) {
+      for (int y = 0; y < m_nodesY; y++) {
         GridPosition pos = new GridPosition(x, y);
-        g.put(pos, Double.POSITIVE_INFINITY);
-        rhs.put(pos, Double.POSITIVE_INFINITY);
+        m_g.put(pos, Double.POSITIVE_INFINITY);
+        m_rhs.put(pos, Double.POSITIVE_INFINITY);
       }
     }
 
     // Goal has zero cost-to-go
-    rhs.put(sGoal, 0.0);
-    open.put(sGoal, key(sGoal, sStart));
+    m_rhs.put(sGoal, 0.0);
+    m_open.put(sGoal, key(sGoal, sStart));
   }
 
   private void computeOrImprovePath(GridPosition sStart, GridPosition sGoal) {
     int iterations = 0;
-    int maxIterations = nodesX * nodesY * 2; // Safety limit
+    int maxIterations = m_nodesX * m_nodesY * 2; // Safety limit
 
     while (iterations++ < maxIterations) {
       var sv = topKey();
@@ -450,23 +454,24 @@ public class LocalADStar implements Pathfinder {
       Pair<Double, Double> v = sv.getSecond();
 
       if (comparePair(v, key(sStart, sStart)) >= 0
-          && rhs.getOrDefault(sStart, Double.POSITIVE_INFINITY)
-              .equals(g.getOrDefault(sStart, Double.POSITIVE_INFINITY))) {
+          && m_rhs
+              .getOrDefault(sStart, Double.POSITIVE_INFINITY)
+              .equals(m_g.getOrDefault(sStart, Double.POSITIVE_INFINITY))) {
         break;
       }
 
-      open.remove(s);
+      m_open.remove(s);
 
-      if (g.getOrDefault(s, Double.POSITIVE_INFINITY)
-          > rhs.getOrDefault(s, Double.POSITIVE_INFINITY)) {
-        g.put(s, rhs.get(s));
-        closed.add(s);
+      if (m_g.getOrDefault(s, Double.POSITIVE_INFINITY)
+          > m_rhs.getOrDefault(s, Double.POSITIVE_INFINITY)) {
+        m_g.put(s, m_rhs.get(s));
+        m_closed.add(s);
 
         for (GridPosition sn : getOpenNeighbors(s)) {
           updateState(sn, sStart, sGoal);
         }
       } else {
-        g.put(s, Double.POSITIVE_INFINITY);
+        m_g.put(s, Double.POSITIVE_INFINITY);
         for (GridPosition sn : getOpenNeighbors(s)) {
           updateState(sn, sStart, sGoal);
         }
@@ -479,22 +484,22 @@ public class LocalADStar implements Pathfinder {
     if (!s.equals(sGoal)) {
       double minRhs = Double.POSITIVE_INFINITY;
       for (GridPosition x : getOpenNeighbors(s)) {
-        double cost = g.getOrDefault(x, Double.POSITIVE_INFINITY) + cost(s, x);
+        double cost = m_g.getOrDefault(x, Double.POSITIVE_INFINITY) + cost(s, x);
         if (cost < minRhs) {
           minRhs = cost;
         }
       }
-      rhs.put(s, minRhs);
+      m_rhs.put(s, minRhs);
     }
 
-    open.remove(s);
+    m_open.remove(s);
 
-    if (!g.getOrDefault(s, Double.POSITIVE_INFINITY)
-        .equals(rhs.getOrDefault(s, Double.POSITIVE_INFINITY))) {
-      if (!closed.contains(s)) {
-        open.put(s, key(s, sStart));
+    if (!m_g.getOrDefault(s, Double.POSITIVE_INFINITY)
+        .equals(m_rhs.getOrDefault(s, Double.POSITIVE_INFINITY))) {
+      if (!m_closed.contains(s)) {
+        m_open.put(s, key(s, sStart));
       } else {
-        incons.put(s, Pair.of(0.0, 0.0));
+        m_incons.put(s, Pair.of(0.0, 0.0));
       }
     }
   }
@@ -518,7 +523,7 @@ public class LocalADStar implements Pathfinder {
         if (neighbors.isEmpty()) {
           System.out.println(
               "[AD*] ERROR: No open neighbors from start! Checking raw obstacles...");
-          System.out.println("[AD*] Start in raw obstacles? " + obstacles.contains(s));
+          System.out.println("[AD*] Start in raw obstacles? " + m_obstacles.contains(s));
         }
       }
 
@@ -527,7 +532,7 @@ public class LocalADStar implements Pathfinder {
       double bestCost = Double.POSITIVE_INFINITY;
 
       for (GridPosition x : neighbors) {
-        double gCost = g.getOrDefault(x, Double.POSITIVE_INFINITY);
+        double gCost = m_g.getOrDefault(x, Double.POSITIVE_INFINITY);
         if (gCost < bestCost) {
           bestCost = gCost;
           best = x;
@@ -573,14 +578,16 @@ public class LocalADStar implements Pathfinder {
     }
 
     // Replace start with actual pose (always safe to use real start position)
-    // Only replace end if goal was NOT in an obstacle - otherwise keep the adjusted safe position
+    // Only replace end if goal was NOT in an obstacle - otherwise keep the adjusted
+    // safe position
     if (!waypoints.isEmpty()) {
       waypoints.set(0, realStartPose.getTranslation());
-      if (!goalWasInObstacle) {
+      if (!m_goalWasInObstacle) {
         // Goal was in free space, use exact requested position
         waypoints.set(waypoints.size() - 1, realGoalPose.getTranslation());
       } else {
-        // Goal was in obstacle - keep the grid-adjusted safe position (already set from loop above)
+        // Goal was in obstacle - keep the grid-adjusted safe position (already set from
+        // loop above)
         System.out.println("[AD*] Goal was in obstacle - using adjusted safe position instead of "
             + "original goal (" + String.format("%.3f", realGoalPose.getX()) + ", "
             + String.format("%.3f", realGoalPose.getY()) + ")");
@@ -626,8 +633,9 @@ public class LocalADStar implements Pathfinder {
   }
 
   private boolean isCollision(GridPosition s1, GridPosition s2) {
-    // Check against raw obstacles for collision (inflated used for findClosestNonObstacle)
-    if (obstacles.contains(s1) || obstacles.contains(s2)) {
+    // Check against raw obstacles for collision (inflated used for
+    // findClosestNonObstacle)
+    if (m_obstacles.contains(s1) || m_obstacles.contains(s2)) {
       return true;
     }
 
@@ -635,7 +643,7 @@ public class LocalADStar implements Pathfinder {
     if (s1.x() != s2.x() && s1.y() != s2.y()) {
       GridPosition corner1 = new GridPosition(s1.x(), s2.y());
       GridPosition corner2 = new GridPosition(s2.x(), s1.y());
-      return obstacles.contains(corner1) || obstacles.contains(corner2);
+      return m_obstacles.contains(corner1) || m_obstacles.contains(corner2);
     }
 
     return false;
@@ -661,7 +669,7 @@ public class LocalADStar implements Pathfinder {
 
     for (; n > 0; n--) {
       // Use raw obstacles for walkability check
-      if (obstacles.contains(new GridPosition(x, y))) {
+      if (m_obstacles.contains(new GridPosition(x, y))) {
         return false;
       }
 
@@ -693,11 +701,13 @@ public class LocalADStar implements Pathfinder {
         int nx = s.x() + dx;
         int ny = s.y() + dy;
 
-        if (nx >= 0 && nx < nodesX && ny >= 0 && ny < nodesY) {
+        if (nx >= 0 && nx < m_nodesX && ny >= 0 && ny < m_nodesY) {
           GridPosition neighbor = new GridPosition(nx, ny);
-          // Only check raw obstacles, not inflated - this allows the algorithm to find paths
-          // The inflation is for safety, but the robot's actual path can go near obstacles
-          if (!obstacles.contains(neighbor)) {
+          // Only check raw obstacles, not inflated - this allows the algorithm to find
+          // paths
+          // The inflation is for safety, but the robot's actual path can go near
+          // obstacles
+          if (!m_obstacles.contains(neighbor)) {
             neighbors.add(neighbor);
           }
         }
@@ -709,12 +719,13 @@ public class LocalADStar implements Pathfinder {
 
   private GridPosition findClosestNonObstacle(GridPosition pos) {
     // First, ensure the starting position is clamped to valid grid bounds
-    int clampedX = Math.max(0, Math.min(pos.x(), nodesX - 1));
-    int clampedY = Math.max(0, Math.min(pos.y(), nodesY - 1));
-    GridPosition clampedPos = new GridPosition(clampedX, clampedY);
+    int clampedX = Math.max(0, Math.min(pos.x(), m_nodesX - 1));
+    int clampedY = Math.max(0, Math.min(pos.y(), m_nodesY - 1));
+    var clampedPos = new GridPosition(clampedX, clampedY);
 
-    // NavGrid already includes robot buffer, so we check against obstacles directly
-    if (!obstacles.contains(clampedPos)) {
+    // NavGrid already includes robot buffer, so we check against obstacles
+    // directly
+    if (!m_obstacles.contains(clampedPos)) {
       return clampedPos;
     }
 
@@ -723,7 +734,7 @@ public class LocalADStar implements Pathfinder {
     Queue<GridPosition> queue = new LinkedList<>();
     queue.add(clampedPos);
 
-    int maxSearchIterations = nodesX * nodesY; // Limit to prevent infinite loops
+    int maxSearchIterations = m_nodesX * m_nodesY; // Limit to prevent infinite loops
     int iterations = 0;
 
     while (!queue.isEmpty() && iterations < maxSearchIterations) {
@@ -732,10 +743,10 @@ public class LocalADStar implements Pathfinder {
 
       // Check if this position is valid and not an obstacle
       if (check.x() >= 0
-          && check.x() < nodesX
+          && check.x() < m_nodesX
           && check.y() >= 0
-          && check.y() < nodesY
-          && !obstacles.contains(check)) {
+          && check.y() < m_nodesY
+          && !m_obstacles.contains(check)) {
         return check;
       }
 
@@ -746,7 +757,7 @@ public class LocalADStar implements Pathfinder {
           int nx = check.x() + dx;
           int ny = check.y() + dy;
           // Only add neighbors that are within bounds
-          if (nx >= 0 && nx < nodesX && ny >= 0 && ny < nodesY) {
+          if (nx >= 0 && nx < m_nodesX && ny >= 0 && ny < m_nodesY) {
             GridPosition neighbor = new GridPosition(nx, ny);
             if (!visited.contains(neighbor) && !queue.contains(neighbor)) {
               queue.add(neighbor);
@@ -761,8 +772,8 @@ public class LocalADStar implements Pathfinder {
   }
 
   private Pair<Double, Double> key(GridPosition s, GridPosition sStart) {
-    double gVal = g.getOrDefault(s, Double.POSITIVE_INFINITY);
-    double rhsVal = rhs.getOrDefault(s, Double.POSITIVE_INFINITY);
+    double gVal = m_g.getOrDefault(s, Double.POSITIVE_INFINITY);
+    double rhsVal = m_rhs.getOrDefault(s, Double.POSITIVE_INFINITY);
 
     if (gVal > rhsVal) {
       return Pair.of(rhsVal + EPS * heuristic(sStart, s), rhsVal);
@@ -773,7 +784,7 @@ public class LocalADStar implements Pathfinder {
 
   private Pair<GridPosition, Pair<Double, Double>> topKey() {
     Map.Entry<GridPosition, Pair<Double, Double>> min = null;
-    for (var entry : open.entrySet()) {
+    for (var entry : m_open.entrySet()) {
       if (min == null || comparePair(entry.getValue(), min.getValue()) < 0) {
         min = entry;
       }
@@ -791,16 +802,17 @@ public class LocalADStar implements Pathfinder {
   }
 
   private GridPosition getGridPos(Translation2d pos) {
-    int x = (int) Math.floor(pos.getX() / nodeSize);
-    int y = (int) Math.floor(pos.getY() / nodeSize);
-    // Clamp to valid grid bounds to handle edge cases (robot at/near origin or outside field)
-    x = Math.max(0, Math.min(x, nodesX - 1));
-    y = Math.max(0, Math.min(y, nodesY - 1));
+    int x = (int) Math.floor(pos.getX() / m_nodeSize);
+    int y = (int) Math.floor(pos.getY() / m_nodeSize);
+    // Clamp to valid grid bounds to handle edge cases (robot at/near origin or
+    // outside field)
+    x = Math.max(0, Math.min(x, m_nodesX - 1));
+    y = Math.max(0, Math.min(y, m_nodesY - 1));
     return new GridPosition(x, y);
   }
 
   private Translation2d gridPosToTranslation(GridPosition pos) {
     return new Translation2d(
-        (pos.x() * nodeSize) + (nodeSize / 2.0), (pos.y() * nodeSize) + (nodeSize / 2.0));
+        (pos.x() * m_nodeSize) + (m_nodeSize / 2.0), (pos.y() * m_nodeSize) + (m_nodeSize / 2.0));
   }
 }

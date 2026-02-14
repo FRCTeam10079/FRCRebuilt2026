@@ -9,11 +9,12 @@ import edu.wpi.first.math.controller.PIDController;
 public class NetworkedPID extends PIDController {
   private static int instanceCount;
 
-  private String name;
+  private String m_name;
 
-  private NetworkedDouble networkedKp;
-  private NetworkedDouble networkedKi;
-  private NetworkedDouble networkedKd;
+  private NetworkedDouble m_networkedKp;
+  private NetworkedDouble m_networkedKi;
+  private NetworkedDouble m_networkedKd;
+
   /**
    * Allocates a PIDController with the given constants for kp, ki, and kd and a default period of
    * 0.02 seconds.
@@ -29,7 +30,7 @@ public class NetworkedPID extends PIDController {
     super(kp, ki, kd);
     instanceCount++;
 
-    this.name = "NetworkedPIDController" + instanceCount;
+    m_name = "NetworkedPIDController" + instanceCount;
 
     setupNT(kp, ki, kd);
   }
@@ -50,7 +51,7 @@ public class NetworkedPID extends PIDController {
     super(kp, ki, kd);
     instanceCount++;
 
-    this.name = name;
+    m_name = name;
 
     setupNT(kp, ki, kd);
   }
@@ -73,15 +74,15 @@ public class NetworkedPID extends PIDController {
     super(kp, ki, kd, period);
     instanceCount++;
 
-    this.name = name;
+    m_name = name;
 
     setupNT(kp, ki, kd);
   }
 
   private void setupNT(double kp, double ki, double kd) {
-    this.networkedKp = new NetworkedDouble("/NetworkedLib/" + name + "/kp", kp);
-    this.networkedKi = new NetworkedDouble("/NetworkedLib/" + name + "/ki", ki);
-    this.networkedKd = new NetworkedDouble("/NetworkedLib/" + name + "/kd", kd);
+    m_networkedKp = new NetworkedDouble("/NetworkedLib/" + m_name + "/kp", kp);
+    m_networkedKi = new NetworkedDouble("/NetworkedLib/" + m_name + "/ki", ki);
+    m_networkedKd = new NetworkedDouble("/NetworkedLib/" + m_name + "/kd", kd);
   }
 
   /**
@@ -98,6 +99,6 @@ public class NetworkedPID extends PIDController {
 
   /** Updates the current PID with new values */
   public void updatePID() {
-    this.setPID(networkedKp.get(), networkedKi.get(), networkedKd.get());
+    this.setPID(m_networkedKp.get(), m_networkedKi.get(), m_networkedKd.get());
   }
 }

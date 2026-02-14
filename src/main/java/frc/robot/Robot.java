@@ -19,22 +19,19 @@ import frc.robot.Constants.VisionConstants;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
-  private final RobotContainer m_robotContainer;
+  private final RobotContainer m_robotContainer = new RobotContainer();
 
   // MASTER STATE MACHINE - Controls EVERYTHING
-  private final RobotStateMachine m_stateMachine;
+  private final RobotStateMachine m_stateMachine = RobotStateMachine.getInstance();
 
   public Robot() {
-    m_robotContainer = new RobotContainer();
-    m_stateMachine = RobotStateMachine.getInstance();
-
     // ==================== LIMELIGHT CAMERA STREAM FOR ELASTIC DASHBOARD
     // ====================
     // Add Limelight camera stream to CameraServer so it appears in Elastic
     // dashboard
     // The stream URL is http://limelight.local:5800 or http://<IP>:5800
     try {
-      HttpCamera limelightCamera = new HttpCamera(
+      var limelightCamera = new HttpCamera(
           "Limelight",
           "http://" + VisionConstants.LIMELIGHT_NAME + ".local:5800/stream.mjpg",
           HttpCameraKind.kMJPGStreamer);

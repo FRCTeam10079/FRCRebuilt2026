@@ -10,14 +10,14 @@ import frc.robot.generated.TunerConstants;
 public class IndexerSubsystem extends SubsystemBase {
   // Use the generated CANBus instance instead of the deprecated String-based
   // constructor
-  private final TalonFX feederMotor =
+  private final TalonFX m_feederMotor =
       new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
   // // Follower commented out to see if it helps with issues
-  // private final TalonFX spindexerMotor;
+  // private final TalonFX m_spindexerMotor;
 
   public IndexerSubsystem() {
     // // Commented out to see if it helps with issues
-    // spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus);
+    // m_spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus);
 
     var config = new TalonFXConfiguration();
 
@@ -33,25 +33,25 @@ public class IndexerSubsystem extends SubsystemBase {
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
     // Apply config to the LEADER
-    feederMotor.getConfigurator().apply(config);
+    m_feederMotor.getConfigurator().apply(config);
 
     // Configure the FOLLOWER
     // We apply the same safety config to the follower too, just to be safe.
     // Commented out to see if it helps with issues
-    // spindexerMotor.getConfigurator().apply(config);
+    // m_spindexerMotor.getConfigurator().apply(config);
 
     // Tell the follower to listen to the leader
     // Commented out to see if it helps with issues
-    // spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID,
+    // m_spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID,
     // false));
   }
 
   public void setSpeed(double speed) {
     // Only command the leader, follow does it automatically
-    feederMotor.set(speed);
+    m_feederMotor.set(speed);
   }
 
   public void stop() {
-    feederMotor.stopMotor();
+    m_feederMotor.stopMotor();
   }
 }

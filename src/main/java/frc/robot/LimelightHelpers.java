@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Networks, and standard color/retroreflective tracking.
  */
 public class LimelightHelpers {
-
   private static final Map<String, DoubleArrayEntry> doubleArrayEntries = new ConcurrentHashMap<>();
 
   /** Represents a Color/Retroreflective Target Result extracted from JSON Output */

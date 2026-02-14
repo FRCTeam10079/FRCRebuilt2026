@@ -20,15 +20,15 @@ import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 
 public class Telemetry {
-  private final double m_MaxSpeed;
+  private final double m_maxSpeed;
 
   /* What to publish over networktables for telemetry */
 
-  private final SwerveDriveTelemetry swerveDriveTelemetry;
+  private final SwerveDriveTelemetry m_swerveDriveTelemetry;
 
   /* Robot pose for field positioning */
-  private final DoubleArrayPublisher fieldPub;
-  private final StringPublisher fieldTypePub;
+  private final DoubleArrayPublisher m_fieldPub;
+  private final StringPublisher m_fieldTypePub;
 
   /* Mechanisms to represent the swerve module states */
   private final Mechanism2d[] m_moduleMechanisms = new Mechanism2d[4];
@@ -48,11 +48,11 @@ public class Telemetry {
    */
   public Telemetry(double maxSpeed) {
     final var instance = NetworkTableInstance.getDefault();
-    swerveDriveTelemetry = new SwerveDriveTelemetry(instance);
+    m_swerveDriveTelemetry = new SwerveDriveTelemetry(instance);
 
     final NetworkTable table = instance.getTable("Pose");
-    fieldPub = table.getDoubleArrayTopic("robotPose").publish();
-    fieldTypePub = table.getStringTopic(".type").publish();
+    m_fieldPub = table.getDoubleArrayTopic("robotPose").publish();
+    m_fieldTypePub = table.getStringTopic(".type").publish();
 
     for (int i = 0; i < 4; i++) {
       m_moduleMechanisms[i] = new Mechanism2d(1, 1);
@@ -67,13 +67,13 @@ public class Telemetry {
       SmartDashboard.putData("Module " + i, m_moduleMechanisms[i]);
     }
 
-    m_MaxSpeed = maxSpeed;
+    m_maxSpeed = maxSpeed;
     SignalLogger.start();
   }
 
   /** Accept the swerve drive state and telemeterize it to SmartDashboard and SignalLogger. */
   public void telemeterize(SwerveDriveState state) {
-    swerveDriveTelemetry.telemeterize(state);
+    m_swerveDriveTelemetry.telemeterize(state);
 
     /* Also write to log file */
     m_poseArray[0] = state.Pose.getX();
@@ -93,14 +93,14 @@ public class Telemetry {
     SignalLogger.writeDouble("DriveState/OdometryPeriod", state.OdometryPeriod, "seconds");
 
     /* Telemeterize the pose to a Field2d */
-    fieldTypePub.set("Field2d");
-    fieldPub.set(m_poseArray);
+    m_fieldTypePub.set("Field2d");
+    m_fieldPub.set(m_poseArray);
 
     /* Telemeterize each module state to a Mechanism2d */
     for (int i = 0; i < 4; i++) {
       m_moduleSpeeds[i].setAngle(state.ModuleStates[i].angle);
       m_moduleDirections[i].setAngle(state.ModuleStates[i].angle);
-      m_moduleSpeeds[i].setLength(state.ModuleStates[i].speedMetersPerSecond / (2 * m_MaxSpeed));
+      m_moduleSpeeds[i].setLength(state.ModuleStates[i].speedMetersPerSecond / (2 * m_maxSpeed));
     }
   }
 }

@@ -29,47 +29,46 @@ import frc.robot.subsystems.LimelightSubsystem;
  * <p>For REBUILT 2026 - Generic AprilTag alignment for any field element
  */
 public class AlignToAprilTag extends Command {
-
   // Subsystems
-  private final CommandSwerveDrivetrain drivetrain;
-  private final LimelightSubsystem limelight;
-  private final RobotStateMachine stateMachine;
+  private final CommandSwerveDrivetrain m_drivetrain;
+  private final LimelightSubsystem m_limelight;
+  private final RobotStateMachine m_stateMachine;
 
   // Timer for logging/timeout
-  private final Timer timer = new Timer();
+  private final Timer m_timer = new Timer();
 
   // PID Controllers for position control
-  private final PIDController pidX;
-  private final PIDController pidY;
-  private final PIDController pidRotate;
+  private final PIDController m_pidX;
+  private final PIDController m_pidY;
+  private final PIDController m_pidRotate;
 
   // Swerve drive request - field centric with velocity control
-  private final SwerveRequest.FieldCentric driveRequest =
+  private final SwerveRequest.FieldCentric m_driveRequest =
       new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.Velocity);
 
   // Stop request
-  private final SwerveRequest stop;
+  private final SwerveRequest m_stop;
 
   // Target pose to align to
-  private Pose2d targetPose;
+  private Pose2d m_targetPose;
 
   // Configuration from Constants
-  private final double speed;
-  private final double rotationSpeed;
-  private final double positionTolerance;
-  private final double yawTolerance;
+  private final double m_speed;
+  private final double m_rotationSpeed;
+  private final double m_positionTolerance;
+  private final double m_yawTolerance;
 
   // Offset configuration
-  private final AlignPosition alignPosition;
-  private double offsetX = 0;
-  private double offsetY = 0;
+  private final AlignPosition m_alignPosition;
+  private double m_offsetX = 0;
+  private double m_offsetY = 0;
 
   // Target AprilTag info
-  private int targetTagID;
-  private boolean tagDetected = false;
+  private int m_targetTagID;
+  private boolean m_tagDetected = false;
 
   // Store initial tag to prevent switching during alignment
-  private Integer storedTagID = null;
+  private Integer m_storedTagID = null;
 
   /**
    * Creates a new AlignToAprilTag command
@@ -82,39 +81,39 @@ public class AlignToAprilTag extends Command {
       CommandSwerveDrivetrain drivetrain,
       LimelightSubsystem limelight,
       AlignPosition alignPosition) {
-    this.drivetrain = drivetrain;
-    this.limelight = limelight;
-    this.stateMachine = RobotStateMachine.getInstance();
-    this.alignPosition = alignPosition;
+    m_drivetrain = drivetrain;
+    m_limelight = limelight;
+    m_stateMachine = RobotStateMachine.getInstance();
+    m_alignPosition = alignPosition;
 
     // Get constants
-    this.speed = DrivetrainConstants.ALIGN_SPEED_MPS;
-    this.rotationSpeed = DrivetrainConstants.ALIGN_ROTATION_SPEED;
-    this.positionTolerance = DrivetrainConstants.POSITION_TOLERANCE_METERS;
-    this.yawTolerance = DrivetrainConstants.YAW_TOLERANCE_RADIANS;
+    m_speed = DrivetrainConstants.ALIGN_SPEED_MPS;
+    m_rotationSpeed = DrivetrainConstants.ALIGN_ROTATION_SPEED;
+    m_positionTolerance = DrivetrainConstants.POSITION_TOLERANCE_METERS;
+    m_yawTolerance = DrivetrainConstants.YAW_TOLERANCE_RADIANS;
 
     // Initialize PID controllers with values from Constants
-    pidX = new PIDController(
+    m_pidX = new PIDController(
         DrivetrainConstants.ALIGN_PID_KP,
         DrivetrainConstants.ALIGN_PID_KI,
         DrivetrainConstants.ALIGN_PID_KD);
-    pidY = new PIDController(
+    m_pidY = new PIDController(
         DrivetrainConstants.ALIGN_PID_KP,
         DrivetrainConstants.ALIGN_PID_KI,
         DrivetrainConstants.ALIGN_PID_KD);
-    pidRotate = new PIDController(
+    m_pidRotate = new PIDController(
         DrivetrainConstants.ALIGN_ROTATION_KP, 0, DrivetrainConstants.ALIGN_ROTATION_KD);
 
     // Enable continuous input for rotation (-PI to PI are same point)
-    pidRotate.enableContinuousInput(-Math.PI, Math.PI);
+    m_pidRotate.enableContinuousInput(-Math.PI, Math.PI);
 
     // Create stop request
-    stop = driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0);
+    m_stop = m_driveRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0);
 
     // This command requires the drivetrain
-    addRequirements(drivetrain);
+    addRequirements(m_drivetrain);
 
-    System.out.println("[AlignToAprilTag] Created for " + alignPosition + " position");
+    System.out.println("[AlignToAprilTag] Created for " + m_alignPosition + " position");
   }
 
   /** Convenience constructor for CENTER alignment */
@@ -125,30 +124,30 @@ public class AlignToAprilTag extends Command {
   @Override
   public void initialize() {
     // Start timer
-    timer.restart();
+    m_timer.restart();
 
     // Set state machine to vision tracking mode
-    stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.VISION_TRACKING);
-    stateMachine.setAlignedToTarget(false);
+    m_stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.VISION_TRACKING);
+    m_stateMachine.setAlignedToTarget(false);
 
     // Reset stored tag
-    storedTagID = null;
+    m_storedTagID = null;
 
     // Get current robot pose
-    Pose2d robotPose = drivetrain.getState().Pose;
+    Pose2d robotPose = m_drivetrain.getState().Pose;
     if (robotPose == null) {
       System.out.println("[AlignToAprilTag] ERROR: Robot pose is null!");
-      tagDetected = false;
+      m_tagDetected = false;
       return;
     }
 
     // Find the closest AprilTag using odometry
     double minDistance = Double.MAX_VALUE;
-    targetTagID = -1;
+    m_targetTagID = -1;
 
     for (int id : AprilTagMaps.aprilTagMap.keySet()) {
       double[] tagData = AprilTagMaps.aprilTagMap.get(id);
-      Pose2d tagPose = new Pose2d(
+      var tagPose = new Pose2d(
           tagData[0] * Constants.INCHES_TO_METERS,
           tagData[1] * Constants.INCHES_TO_METERS,
           new Rotation2d(Math.toRadians(tagData[3])));
@@ -156,68 +155,68 @@ public class AlignToAprilTag extends Command {
       double distance = calculateDistance(robotPose, tagPose);
       if (distance < minDistance) {
         minDistance = distance;
-        targetTagID = id;
+        m_targetTagID = id;
       }
     }
 
     // Check if a tag was found
-    if (targetTagID == -1) {
+    if (m_targetTagID == -1) {
       System.out.println("[AlignToAprilTag] ERROR: No AprilTag found in map!");
-      tagDetected = false;
+      m_tagDetected = false;
       return;
     }
 
-    System.out.println("[AlignToAprilTag] Closest tag from odometry: " + targetTagID);
+    System.out.println("[AlignToAprilTag] Closest tag from odometry: " + m_targetTagID);
 
     // Check if Limelight sees a valid tag - prefer it over odometry
-    int limelightTagID = limelight.getTid();
+    int limelightTagID = m_limelight.getTid();
     if (limelightTagID != 0 && AprilTagMaps.aprilTagMap.containsKey(limelightTagID)) {
-      targetTagID = limelightTagID;
-      System.out.println("[AlignToAprilTag] Using Limelight tag: " + targetTagID);
+      m_targetTagID = limelightTagID;
+      System.out.println("[AlignToAprilTag] Using Limelight tag: " + m_targetTagID);
     } else if (limelightTagID == 0) {
-      System.out.println(
-          "[AlignToAprilTag] Limelight has no target, using odometry closest tag: " + targetTagID);
+      System.out.println("[AlignToAprilTag] Limelight has no target, using odometry closest tag: "
+          + m_targetTagID);
     } else {
       System.out.println("[AlignToAprilTag] Limelight tag "
           + limelightTagID
           + " not in map, using odometry: "
-          + targetTagID);
+          + m_targetTagID);
     }
 
     // Store the tag ID to prevent switching mid-alignment
-    storedTagID = targetTagID;
+    m_storedTagID = m_targetTagID;
 
     // Get tag data
-    double[] tagData = AprilTagMaps.aprilTagMap.get(targetTagID);
+    double[] tagData = AprilTagMaps.aprilTagMap.get(m_targetTagID);
     if (tagData == null) {
-      System.out.println("[AlignToAprilTag] ERROR: Tag data is null for ID: " + targetTagID);
-      tagDetected = false;
+      System.out.println("[AlignToAprilTag] ERROR: Tag data is null for ID: " + m_targetTagID);
+      m_tagDetected = false;
       return;
     }
 
     // Convert tag position to Pose2d
-    Pose2d aprilTagPose = new Pose2d(
+    var aprilTagPose = new Pose2d(
         tagData[0] * Constants.INCHES_TO_METERS,
         tagData[1] * Constants.INCHES_TO_METERS,
         new Rotation2d(Math.toRadians(tagData[3])));
 
-    tagDetected = true;
+    m_tagDetected = true;
 
     // Calculate offset based on alignment position
     // Offsets are relative to the tag's coordinate frame
-    switch (alignPosition) {
+    switch (m_alignPosition) {
       case LEFT:
-        offsetX = DrivetrainConstants.ALIGN_OFFSET_X_LEFT;
-        offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_LEFT;
+        m_offsetX = DrivetrainConstants.ALIGN_OFFSET_X_LEFT;
+        m_offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_LEFT;
         break;
       case RIGHT:
-        offsetX = DrivetrainConstants.ALIGN_OFFSET_X_RIGHT;
-        offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_RIGHT;
+        m_offsetX = DrivetrainConstants.ALIGN_OFFSET_X_RIGHT;
+        m_offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_RIGHT;
         break;
       case CENTER:
       default:
-        offsetX = DrivetrainConstants.ALIGN_OFFSET_X_CENTER;
-        offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_CENTER;
+        m_offsetX = DrivetrainConstants.ALIGN_OFFSET_X_CENTER;
+        m_offsetY = DrivetrainConstants.ALIGN_OFFSET_Y_CENTER;
         break;
     }
 
@@ -227,46 +226,46 @@ public class AlignToAprilTag extends Command {
 
     // Rotate the offset from tag-relative to field-relative
     double rotatedOffsetX =
-        (offsetX * Math.cos(targetRotation)) - (offsetY * Math.sin(targetRotation));
+        (m_offsetX * Math.cos(targetRotation)) - (m_offsetY * Math.sin(targetRotation));
     double rotatedOffsetY =
-        (offsetX * Math.sin(targetRotation)) + (offsetY * Math.cos(targetRotation));
+        (m_offsetX * Math.sin(targetRotation)) + (m_offsetY * Math.cos(targetRotation));
 
     // Calculate final target pose
-    targetPose = new Pose2d(
+    m_targetPose = new Pose2d(
         aprilTagPose.getX() + rotatedOffsetX,
         aprilTagPose.getY() + rotatedOffsetY,
         new Rotation2d(targetRotation));
 
     // Set PID setpoints
-    pidX.setSetpoint(targetPose.getX());
-    pidY.setSetpoint(targetPose.getY());
-    pidRotate.setSetpoint(targetPose.getRotation().getRadians());
+    m_pidX.setSetpoint(m_targetPose.getX());
+    m_pidY.setSetpoint(m_targetPose.getY());
+    m_pidRotate.setSetpoint(m_targetPose.getRotation().getRadians());
 
     System.out.println("[AlignToAprilTag] Target Pose: X="
-        + targetPose.getX()
+        + m_targetPose.getX()
         + ", Y="
-        + targetPose.getY()
+        + m_targetPose.getY()
         + ", Yaw="
-        + Math.toDegrees(targetPose.getRotation().getRadians())
+        + Math.toDegrees(m_targetPose.getRotation().getRadians())
         + "°");
 
     // Log to SmartDashboard
-    SmartDashboard.putNumber("AlignToAprilTag/TargetTagID", targetTagID);
-    SmartDashboard.putNumber("AlignToAprilTag/TargetX", targetPose.getX());
-    SmartDashboard.putNumber("AlignToAprilTag/TargetY", targetPose.getY());
+    SmartDashboard.putNumber("AlignToAprilTag/TargetTagID", m_targetTagID);
+    SmartDashboard.putNumber("AlignToAprilTag/TargetX", m_targetPose.getX());
+    SmartDashboard.putNumber("AlignToAprilTag/TargetY", m_targetPose.getY());
     SmartDashboard.putNumber(
-        "AlignToAprilTag/TargetYaw", targetPose.getRotation().getDegrees());
+        "AlignToAprilTag/TargetYaw", m_targetPose.getRotation().getDegrees());
   }
 
   @Override
   public void execute() {
     // If no tag detected, don't execute
-    if (!tagDetected) {
+    if (!m_tagDetected) {
       return;
     }
 
     // Get current robot pose
-    Pose2d currentPose = drivetrain.getState().Pose;
+    Pose2d currentPose = m_drivetrain.getState().Pose;
     if (currentPose == null) {
       return;
     }
@@ -279,16 +278,16 @@ public class AlignToAprilTag extends Command {
     SmartDashboard.putNumber("AlignToAprilTag/CurrentY", currentPose.getY());
     SmartDashboard.putNumber(
         "AlignToAprilTag/CurrentYaw", currentPose.getRotation().getDegrees());
-    SmartDashboard.putNumber("AlignToAprilTag/ErrorX", pidX.getError());
-    SmartDashboard.putNumber("AlignToAprilTag/ErrorY", pidY.getError());
-    SmartDashboard.putNumber("AlignToAprilTag/ErrorYaw", Math.toDegrees(pidRotate.getError()));
+    SmartDashboard.putNumber("AlignToAprilTag/ErrorX", m_pidX.getError());
+    SmartDashboard.putNumber("AlignToAprilTag/ErrorY", m_pidY.getError());
+    SmartDashboard.putNumber("AlignToAprilTag/ErrorYaw", Math.toDegrees(m_pidRotate.getError()));
 
     // Check if we need to flip direction based on alliance side
     // Red side tags (6-11) may need direction adjustment
-    boolean isRedSide = Constants.contains(new int[] {6, 7, 8, 9, 10, 11}, targetTagID);
+    boolean isRedSide = Constants.contains(new int[] {6, 7, 8, 9, 10, 11}, m_targetTagID);
 
     // Apply velocities to drivetrain
-    drivetrain.setControl(driveRequest
+    m_drivetrain.setControl(m_driveRequest
         .withVelocityX(velocities[0])
         .withVelocityY(velocities[1])
         .withRotationalRate(velocities[2]));
@@ -297,15 +296,15 @@ public class AlignToAprilTag extends Command {
   /** Calculate velocities using PID control */
   private double[] calculatePIDVelocities(Pose2d currentPose) {
     // Calculate X velocity
-    double velocityX = pidX.calculate(currentPose.getX());
-    velocityX = MathUtil.clamp(velocityX, -speed, speed);
+    double velocityX = m_pidX.calculate(currentPose.getX());
+    velocityX = MathUtil.clamp(velocityX, -m_speed, m_speed);
 
     // Calculate Y velocity
-    double velocityY = pidY.calculate(currentPose.getY());
-    velocityY = MathUtil.clamp(velocityY, -speed, speed);
+    double velocityY = m_pidY.calculate(currentPose.getY());
+    velocityY = MathUtil.clamp(velocityY, -m_speed, m_speed);
 
     // Calculate rotation velocity
-    double velocityYaw = pidRotate.calculate(currentPose.getRotation().getRadians());
+    double velocityYaw = m_pidRotate.calculate(currentPose.getRotation().getRadians());
     velocityYaw = MathUtil.clamp(velocityYaw, -2.0, 2.0);
 
     return new double[] {velocityX, velocityY, velocityYaw};
@@ -321,24 +320,24 @@ public class AlignToAprilTag extends Command {
   @Override
   public boolean isFinished() {
     // End if no tag detected
-    if (!tagDetected) {
+    if (!m_tagDetected) {
       return true;
     }
 
     // Get current pose
-    Pose2d currentPose = drivetrain.getState().Pose;
-    if (currentPose == null || targetPose == null) {
+    Pose2d currentPose = m_drivetrain.getState().Pose;
+    if (currentPose == null || m_targetPose == null) {
       return true;
     }
 
     // Calculate position and yaw error
-    double distance = targetPose.getTranslation().getDistance(currentPose.getTranslation());
+    double distance = m_targetPose.getTranslation().getDistance(currentPose.getTranslation());
     double yawError = Math.abs(MathUtil.angleModulus(
-        targetPose.getRotation().getRadians() - currentPose.getRotation().getRadians()));
+        m_targetPose.getRotation().getRadians() - currentPose.getRotation().getRadians()));
 
     // Check if within tolerance
-    boolean positionReached = distance <= positionTolerance;
-    boolean yawReached = yawError <= yawTolerance;
+    boolean positionReached = distance <= m_positionTolerance;
+    boolean yawReached = yawError <= m_yawTolerance;
 
     SmartDashboard.putNumber("AlignToAprilTag/Distance", distance);
     SmartDashboard.putBoolean("AlignToAprilTag/PositionReached", positionReached);
@@ -350,18 +349,18 @@ public class AlignToAprilTag extends Command {
   @Override
   public void end(boolean interrupted) {
     // Stop the drivetrain
-    drivetrain.setControl(stop);
+    m_drivetrain.setControl(m_stop);
 
     // Return to field-centric drive mode
-    stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.FIELD_CENTRIC);
+    m_stateMachine.setDrivetrainMode(RobotStateMachine.DrivetrainMode.FIELD_CENTRIC);
 
     // Set alignment status based on completion
-    if (!interrupted && tagDetected) {
-      stateMachine.setAlignedToTarget(true);
+    if (!interrupted && m_tagDetected) {
+      m_stateMachine.setAlignedToTarget(true);
       System.out.println(
-          "[AlignToAprilTag] Completed successfully - aligned to tag " + targetTagID);
+          "[AlignToAprilTag] Completed successfully - aligned to tag " + m_targetTagID);
     } else {
-      stateMachine.setAlignedToTarget(false);
+      m_stateMachine.setAlignedToTarget(false);
       System.out.println("[AlignToAprilTag] "
           + (interrupted ? "Interrupted" : "Failed")
           + " - alignment not confirmed");
@@ -369,6 +368,6 @@ public class AlignToAprilTag extends Command {
 
     // Log completion
     SmartDashboard.putBoolean("AlignToAprilTag/Completed", !interrupted);
-    SmartDashboard.putNumber("AlignToAprilTag/Duration", timer.get());
+    SmartDashboard.putNumber("AlignToAprilTag/Duration", m_timer.get());
   }
 }

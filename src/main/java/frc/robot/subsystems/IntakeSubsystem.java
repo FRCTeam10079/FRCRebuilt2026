@@ -6,17 +6,16 @@ import frc.robot.Constants.IntakeConstants;
 import frc.robot.generated.TunerConstants;
 
 public class IntakeSubsystem extends SubsystemBase {
-
-  private final TalonFX intakeMotor =
+  private final TalonFX m_intakeMotor =
       new TalonFX(IntakeConstants.INTAKE_MOTOR_ID, TunerConstants.kCANBus);
 
   public IntakeSubsystem() {}
 
   public void intakeIn() {
-    intakeMotor.set(IntakeConstants.INTAKE_SPEED);
+    m_intakeMotor.set(IntakeConstants.INTAKE_SPEED);
   }
 
   public void stop() {
-    intakeMotor.stopMotor();
+    m_intakeMotor.stopMotor();
   }
 }

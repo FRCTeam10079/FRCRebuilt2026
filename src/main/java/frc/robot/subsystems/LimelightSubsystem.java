@@ -21,42 +21,41 @@ import frc.robot.LimelightHelpers;
  * <p>For REBUILT 2026 season - used for hub alignment
  */
 public class LimelightSubsystem extends SubsystemBase {
-
   // NetworkTable for Limelight data
-  private final NetworkTable limelightTable;
+  private final NetworkTable m_limelightTable;
 
   // Basic targeting data entries
-  private final NetworkTableEntry tid; // Target AprilTag ID
-  private final NetworkTableEntry tx; // Horizontal offset from crosshair (degrees)
-  private final NetworkTableEntry ty; // Vertical offset from crosshair (degrees)
-  private final NetworkTableEntry ta; // Target area (0-100% of image)
-  private final NetworkTableEntry tv; // Valid target exists (0 or 1)
+  private final NetworkTableEntry m_tid; // Target AprilTag ID
+  private final NetworkTableEntry m_tx; // Horizontal offset from crosshair (degrees)
+  private final NetworkTableEntry m_ty; // Vertical offset from crosshair (degrees)
+  private final NetworkTableEntry m_ta; // Target area (0-100% of image)
+  private final NetworkTableEntry m_tv; // Valid target exists (0 or 1)
 
   // Pose data entries
-  private final NetworkTableEntry botPose; // Robot pose relative to target
-  private final NetworkTableEntry botPoseFieldBlue; // Robot pose on field (Blue origin)
-  private final NetworkTableEntry activePipeline; // Current pipeline index
+  private final NetworkTableEntry m_botPose; // Robot pose relative to target
+  private final NetworkTableEntry m_botPoseFieldBlue; // Robot pose on field (Blue origin)
+  private final NetworkTableEntry m_activePipeline; // Current pipeline index
 
   // Configuration
-  private boolean useLimelightForOdometry = false;
+  private boolean m_useLimelightForOdometry = false;
 
   // Reference to drivetrain for odometry updates (set via setDrivetrain method)
-  private CommandSwerveDrivetrain drivetrain;
+  private CommandSwerveDrivetrain m_drivetrain;
 
   /** Creates a new LimelightSubsystem */
   public LimelightSubsystem() {
     // Get the limelight NetworkTable
-    limelightTable = NetworkTableInstance.getDefault().getTable(VisionConstants.LIMELIGHT_NAME);
+    m_limelightTable = NetworkTableInstance.getDefault().getTable(VisionConstants.LIMELIGHT_NAME);
 
     // Initialize NetworkTable entries
-    tid = limelightTable.getEntry("tid");
-    tx = limelightTable.getEntry("tx");
-    ty = limelightTable.getEntry("ty");
-    ta = limelightTable.getEntry("ta");
-    tv = limelightTable.getEntry("tv");
-    botPose = limelightTable.getEntry("botpose_targetspace");
-    botPoseFieldBlue = limelightTable.getEntry("botpose_wpiblue");
-    activePipeline = limelightTable.getEntry("getpipe");
+    m_tid = m_limelightTable.getEntry("tid");
+    m_tx = m_limelightTable.getEntry("tx");
+    m_ty = m_limelightTable.getEntry("ty");
+    m_ta = m_limelightTable.getEntry("ta");
+    m_tv = m_limelightTable.getEntry("tv");
+    m_botPose = m_limelightTable.getEntry("botpose_targetspace");
+    m_botPoseFieldBlue = m_limelightTable.getEntry("botpose_wpiblue");
+    m_activePipeline = m_limelightTable.getEntry("getpipe");
 
     // Configure Limelight
     LimelightHelpers.setPipelineIndex(
@@ -71,7 +70,7 @@ public class LimelightSubsystem extends SubsystemBase {
    * @param drivetrain The CommandSwerveDrivetrain instance
    */
   public void setDrivetrain(CommandSwerveDrivetrain drivetrain) {
-    this.drivetrain = drivetrain;
+    m_drivetrain = drivetrain;
   }
 
   /**
@@ -89,7 +88,7 @@ public class LimelightSubsystem extends SubsystemBase {
     // Vision updates are now consolidated in CommandSwerveDrivetrain.updateVision()
     // This prevents duplicate vision measurements and ensures consistent std dev
     // calculations
-    this.useLimelightForOdometry = false; // Always disabled - drivetrain handles vision
+    m_useLimelightForOdometry = false; // Always disabled - drivetrain handles vision
   }
 
   @Override
@@ -115,7 +114,7 @@ public class LimelightSubsystem extends SubsystemBase {
   /** Update drivetrain odometry with Limelight vision measurements */
   private void updateOdometryWithVision() {
     // Get drivetrain state for orientation data
-    var driveState = drivetrain.getState();
+    var driveState = m_drivetrain.getState();
     double headingDeg = driveState.Pose.getRotation().getDegrees();
     double omegaRps = Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
 
@@ -128,7 +127,7 @@ public class LimelightSubsystem extends SubsystemBase {
 
     // Only add measurement if valid (has tags and robot isn't spinning too fast)
     if (llMeasurement != null && llMeasurement.tagCount > 0 && omegaRps < 2.0) {
-      drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
+      m_drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
     }
   }
 
@@ -136,7 +135,7 @@ public class LimelightSubsystem extends SubsystemBase {
 
   /** @return The robot pose relative to the target [tx, ty, tz, pitch, yaw, roll] */
   public double[] getBotPose() {
-    return botPose.getDoubleArray(new double[6]);
+    return m_botPose.getDoubleArray(new double[6]);
   }
 
   /**
@@ -144,7 +143,7 @@ public class LimelightSubsystem extends SubsystemBase {
    *     Tag Count, Tag Span, Avg Tag Distance, Avg Tag Area]
    */
   public double[] getBotPoseFieldBlue() {
-    return botPoseFieldBlue.getDoubleArray(new double[11]);
+    return m_botPoseFieldBlue.getDoubleArray(new double[11]);
   }
 
   /** @return The yaw of the robot relative to the target (degrees) */
@@ -154,27 +153,27 @@ public class LimelightSubsystem extends SubsystemBase {
 
   /** @return Horizontal offset from crosshair to target (degrees) */
   public double getTx() {
-    return tx.getDouble(0);
+    return m_tx.getDouble(0);
   }
 
   /** @return Vertical offset from crosshair to target (degrees) */
   public double getTy() {
-    return ty.getDouble(0);
+    return m_ty.getDouble(0);
   }
 
   /** @return Target area as percentage of image (0-100) */
   public double getTa() {
-    return ta.getDouble(0);
+    return m_ta.getDouble(0);
   }
 
   /** @return The AprilTag ID being tracked (0 if none) */
   public int getTid() {
-    return (int) tid.getDouble(0);
+    return (int) m_tid.getDouble(0);
   }
 
   /** @return True if a valid target is detected */
   public boolean hasTarget() {
-    return tv.getDouble(0) == 1.0 && getTid() != 0;
+    return m_tv.getDouble(0) == 1.0 && getTid() != 0;
   }
 
   /** @return True if an AprilTag is detected (alias for hasTarget) */
@@ -196,7 +195,7 @@ public class LimelightSubsystem extends SubsystemBase {
 
   /** @return Current active pipeline index */
   public int getActivePipeline() {
-    return (int) activePipeline.getDouble(0);
+    return (int) m_activePipeline.getDouble(0);
   }
 
   /**

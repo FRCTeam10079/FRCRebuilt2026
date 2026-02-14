@@ -68,8 +68,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * adjustment of speeds (e.g., slow mode, scoring mode) Range: 0.0 (stopped) to
    * 1.0 (full speed)
    */
-  private double teleopVelocityCoefficient = 1.0;
-  private double rotationVelocityCoefficient = 1.0;
+  private double m_teleopVelocityCoefficient = 1.0;
+  private double m_rotationVelocityCoefficient = 1.0;
 
   // ==================== HEADING CONTROLLER ====================
   private final SwerveHeadingController m_headingController = new SwerveHeadingController();
@@ -559,10 +559,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Apply velocity coefficients for runtime speed adjustment (slow mode, etc.)
     boolean isBlueAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
     double xVelocity =
-        (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * teleopVelocityCoefficient;
+        (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * m_teleopVelocityCoefficient;
     double yVelocity =
-        (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * teleopVelocityCoefficient;
-    double angularVelocity = -angularMagnitude * maxAngularVelocity * rotationVelocityCoefficient;
+        (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * m_teleopVelocityCoefficient;
+    double angularVelocity = -angularMagnitude * maxAngularVelocity * m_rotationVelocityCoefficient;
 
     // Apply skew compensation for smooth combined translation/rotation
     ChassisSpeeds compensatedSpeeds =
@@ -579,7 +579,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * @param coefficient Speed multiplier (0.0 = stopped, 1.0 = full speed)
    */
   public void setTeleopVelocityCoefficient(double coefficient) {
-    this.teleopVelocityCoefficient = MathUtil.clamp(coefficient, 0.0, 1.0);
+    m_teleopVelocityCoefficient = MathUtil.clamp(coefficient, 0.0, 1.0);
   }
 
   /**
@@ -588,12 +588,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
    * @param coefficient Rotation speed multiplier (0.0 = no rotation, 1.0 = full rotation)
    */
   public void setRotationVelocityCoefficient(double coefficient) {
-    this.rotationVelocityCoefficient = MathUtil.clamp(coefficient, 0.0, 1.0);
+    m_rotationVelocityCoefficient = MathUtil.clamp(coefficient, 0.0, 1.0);
   }
 
   /** Get the current translation velocity coefficient. */
   public double getTeleopVelocityCoefficient() {
-    return teleopVelocityCoefficient;
+    return m_teleopVelocityCoefficient;
   }
 
   /**
@@ -694,9 +694,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Calculate translation velocities (flip for alliance)
     boolean isBlueAlliance = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
     double xVelocity =
-        (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * teleopVelocityCoefficient;
+        (isBlueAlliance ? -xMagnitude : xMagnitude) * maxVelocity * m_teleopVelocityCoefficient;
     double yVelocity =
-        (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * teleopVelocityCoefficient;
+        (isBlueAlliance ? -yMagnitude : yMagnitude) * maxVelocity * m_teleopVelocityCoefficient;
 
     // Get current heading
     double currentHeadingDegrees = getState().Pose.getRotation().getDegrees();

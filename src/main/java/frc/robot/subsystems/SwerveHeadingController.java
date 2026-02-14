@@ -22,7 +22,6 @@ import frc.robot.Constants.HeadingControllerConstants;
  * representing rotational velocity demand
  */
 public class SwerveHeadingController {
-
   // ==================== STATE MACHINE ====================
   public enum HeadingControllerState {
     OFF, // No heading control - return 0 rotation

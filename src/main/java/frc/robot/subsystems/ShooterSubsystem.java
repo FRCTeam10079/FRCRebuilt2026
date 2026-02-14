@@ -29,10 +29,8 @@ import frc.robot.generated.TunerConstants;
  * motor sections if we switch to a 2-motor setup.
  */
 public class ShooterSubsystem extends SubsystemBase {
-
   private final TalonFX m_masterMotor =
       new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
-  ;
   // DUAL MOTOR: Uncomment for 2-motor setup
   // private final TalonFX m_slaveMotor;
 

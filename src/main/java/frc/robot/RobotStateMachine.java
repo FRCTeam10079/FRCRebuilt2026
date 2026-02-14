@@ -18,48 +18,47 @@ import java.util.List;
  * restriction: Must be < 30 inches during climbing phases
  */
 public class RobotStateMachine extends SubsystemBase {
-
   // Singleton instance
   private static RobotStateMachine instance;
 
   // Current states
-  private MatchState matchState = MatchState.DISABLED;
-  private DrivetrainMode driveMode = DrivetrainMode.FIELD_CENTRIC;
-  private GameState gameState = GameState.IDLE;
-  private AllianceColor alliance = AllianceColor.UNKNOWN;
-  private FuelState fuelState = FuelState.EMPTY; // Fuel (ball) tracking
-  private HubShiftState hubShiftState = HubShiftState.UNKNOWN; // Hub shift tracking
-  private ClimbState climbState = ClimbState.NOT_CLIMBING; // Climb state tracking
+  private MatchState m_matchState = MatchState.DISABLED;
+  private DrivetrainMode m_driveMode = DrivetrainMode.FIELD_CENTRIC;
+  private GameState m_gameState = GameState.IDLE;
+  private AllianceColor m_alliance = AllianceColor.UNKNOWN;
+  private FuelState m_fuelState = FuelState.EMPTY; // Fuel (ball) tracking
+  private HubShiftState m_hubShiftState = HubShiftState.UNKNOWN; // Hub shift tracking
+  private ClimbState m_climbState = ClimbState.NOT_CLIMBING; // Climb state tracking
 
   // Alignment tracking (for auto-aiming to hub)
-  private boolean isAlignedToTarget = false;
-  private boolean isShooterAtRPM = false; // Shooter ready to fire
+  private boolean m_isAlignedToTarget = false;
+  private boolean m_isShooterAtRPM = false; // Shooter ready to fire
 
   // State tracking
-  private double stateStartTime = 0;
-  private double matchStartTime = 0;
-  private MatchState previousMatchState = MatchState.DISABLED;
-  private GameState previousGameState = GameState.IDLE;
+  private double m_stateStartTime = 0;
+  private double m_matchStartTime = 0;
+  private MatchState m_previousMatchState = MatchState.DISABLED;
+  private GameState m_previousGameState = GameState.IDLE;
 
   // State history (circular buffer for last 20 states)
   private static final int STATE_HISTORY_SIZE = 20;
-  private final List<StateHistoryEntry> stateHistory = new ArrayList<>();
+  private final List<StateHistoryEntry> m_stateHistory = new ArrayList<>();
 
   // Cycle counting for performance tracking
-  private int fuelScoredAuto = 0;
-  private int fuelScoredTeleop = 0;
-  private int intakeCyclesCompleted = 0;
-  private int scoringCyclesCompleted = 0;
-  private double lastCycleTime = 0;
-  private double fastestCycleTime = Double.MAX_VALUE;
+  private int m_fuelScoredAuto = 0;
+  private int m_fuelScoredTeleop = 0;
+  private int m_intakeCyclesCompleted = 0;
+  private int m_scoringCyclesCompleted = 0;
+  private double m_lastCycleTime = 0;
+  private double m_fastestCycleTime = Double.MAX_VALUE;
 
   // Fuel capacity tracking
-  private int fuelCount = 0;
+  private int m_fuelCount = 0;
 
   // Driver feedback
-  private CommandXboxController driverController;
-  private CommandXboxController operatorController;
-  private double rumbleEndTime = 0;
+  private CommandXboxController m_driverController;
+  private CommandXboxController m_operatorController;
+  private double m_rumbleEndTime = 0;
 
   /** FUEL STATE - Tracks fuel (ball) inventory */
   public enum FuelState {
@@ -358,47 +357,47 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Update alliance color from DriverStation */
   public void updateAlliance() {
-    alliance = DriverStation.getAlliance().isPresent()
-        ? DriverStation.getAlliance().get() == Alliance.Red ? AllianceColor.RED : AllianceColor.BLUE
-        : AllianceColor.UNKNOWN;
+    m_alliance = DriverStation.getAlliance()
+        .map(a -> a == Alliance.Red ? AllianceColor.RED : AllianceColor.BLUE)
+        .orElse(AllianceColor.UNKNOWN);
   }
 
   /** Transition to new match state */
   public void setMatchState(MatchState newState) {
-    if (matchState != newState) {
-      previousMatchState = matchState;
-      matchState = newState;
-      stateStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+    if (m_matchState != newState) {
+      m_previousMatchState = m_matchState;
+      m_matchState = newState;
+      m_stateStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
       onMatchStateChange();
-      logStateChange("Match", previousMatchState.name(), newState.name());
+      logStateChange("Match", m_previousMatchState.name(), newState.name());
     }
   }
 
   /** Transition to new game state */
   public void setGameState(GameState newState) {
-    if (gameState != newState) {
-      previousGameState = gameState;
-      gameState = newState;
-      stateStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+    if (m_gameState != newState) {
+      m_previousGameState = m_gameState;
+      m_gameState = newState;
+      m_stateStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
       onGameStateChange();
-      logStateChange("Game", previousGameState.name(), newState.name());
+      logStateChange("Game", m_previousGameState.name(), newState.name());
     }
   }
 
   /** Transition to new drivetrain mode */
   public void setDrivetrainMode(DrivetrainMode newMode) {
-    if (driveMode != newMode) {
-      DrivetrainMode previousMode = driveMode;
-      driveMode = newMode;
+    if (m_driveMode != newMode) {
+      DrivetrainMode previousMode = m_driveMode;
+      m_driveMode = newMode;
       logStateChange("Drivetrain", previousMode.name(), newMode.name());
     }
   }
 
   /** Set hub shift state based on match timing or field data */
   public void setHubShiftState(HubShiftState newState) {
-    if (hubShiftState != newState) {
-      HubShiftState previousState = hubShiftState;
-      hubShiftState = newState;
+    if (m_hubShiftState != newState) {
+      HubShiftState previousState = m_hubShiftState;
+      m_hubShiftState = newState;
       logStateChange("HubShift", previousState.name(), newState.name());
       onHubShiftChange();
     }
@@ -406,19 +405,19 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Handle match state transitions */
   private void onMatchStateChange() {
-    switch (matchState) {
+    switch (m_matchState) {
       case DISABLED:
         setGameState(GameState.IDLE);
         setDrivetrainMode(DrivetrainMode.DISABLED);
-        isAlignedToTarget = false;
-        isShooterAtRPM = false;
-        climbState = ClimbState.NOT_CLIMBING;
+        m_isAlignedToTarget = false;
+        m_isShooterAtRPM = false;
+        m_climbState = ClimbState.NOT_CLIMBING;
         break;
 
       case AUTO_INIT:
         setGameState(GameState.AUTO_ROUTINE);
         setDrivetrainMode(DrivetrainMode.PATH_FOLLOWING);
-        isAlignedToTarget = false;
+        m_isAlignedToTarget = false;
         updateAlliance();
         resetCycleCounters();
         break;
@@ -426,8 +425,8 @@ public class RobotStateMachine extends SubsystemBase {
       case TELEOP_INIT:
         setGameState(GameState.IDLE);
         setDrivetrainMode(DrivetrainMode.FIELD_CENTRIC);
-        isAlignedToTarget = false;
-        hubShiftState = HubShiftState.UNKNOWN; // Will be updated based on timing
+        m_isAlignedToTarget = false;
+        m_hubShiftState = HubShiftState.UNKNOWN; // Will be updated based on timing
         break;
 
       case TRANSITION_SHIFT:
@@ -450,7 +449,7 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Handle game state transitions Drivetrain mode is decoupled from game state for flexibility */
   private void onGameStateChange() {
-    switch (gameState) {
+    switch (m_gameState) {
       case EMERGENCY_STOP:
         setDrivetrainMode(DrivetrainMode.DISABLED);
         break;
@@ -485,10 +484,10 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Handle hub shift state changes - THE META! */
   private void onHubShiftChange() {
-    switch (hubShiftState) {
+    switch (m_hubShiftState) {
       case MY_HUB_ACTIVE:
         // Time to score! Switch to offensive mode
-        if (!gameState.isEndgame() && !gameState.isClimbing()) {
+        if (!m_gameState.isEndgame() && !m_gameState.isClimbing()) {
           setGameState(GameState.SHIFT_ACTIVE);
           rumbleDriver(0.5, 0.3); // Quick buzz: Hub is active!
         }
@@ -496,7 +495,7 @@ public class RobotStateMachine extends SubsystemBase {
 
       case MY_HUB_INACTIVE:
         // Time to defend/hoard!
-        if (!gameState.isEndgame() && !gameState.isClimbing()) {
+        if (!m_gameState.isEndgame() && !m_gameState.isClimbing()) {
           setGameState(GameState.SHIFT_INACTIVE);
           rumbleDriver(0.3, 0.2); // Gentle buzz: Switch to defense
         }
@@ -514,7 +513,7 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Get time in current state (seconds) */
   public double getTimeInState() {
-    return edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - stateStartTime;
+    return edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - m_stateStartTime;
   }
 
   /** Check if match time indicates endgame (< 30 seconds) */
@@ -538,14 +537,14 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Automatic period detection */
   private void checkPeriodTransitions() {
-    if (matchState != MatchState.TELEOP_RUNNING) return;
+    if (m_matchState != MatchState.TELEOP_RUNNING) return;
 
     // Check for endgame
-    if (isEndgamePeriod() && matchState != MatchState.ENDGAME) {
+    if (isEndgamePeriod() && m_matchState != MatchState.ENDGAME) {
       setMatchState(MatchState.ENDGAME);
     }
     // Check for transition shift period
-    else if (isTransitionPeriod() && matchState != MatchState.TRANSITION_SHIFT) {
+    else if (isTransitionPeriod() && m_matchState != MatchState.TRANSITION_SHIFT) {
       setMatchState(MatchState.TRANSITION_SHIFT);
     }
   }
@@ -553,8 +552,8 @@ public class RobotStateMachine extends SubsystemBase {
   /** State validation - prevent invalid transitions */
   public boolean canTransitionTo(GameState newState) {
     // Disabled can only transition to IDLE
-    return !(matchState == MatchState.DISABLED && newState != GameState.IDLE)
-        && !(newState.isAuto() && !matchState.autonomous); // Auto states only in auto
+    return !(m_matchState == MatchState.DISABLED && newState != GameState.IDLE)
+        && !(newState.isAuto() && !m_matchState.autonomous); // Auto states only in auto
   }
 
   /** Safe state transition with validation */
@@ -562,7 +561,7 @@ public class RobotStateMachine extends SubsystemBase {
     if (canTransitionTo(newState)) {
       setGameState(newState);
     } else {
-      System.out.println("INVALID STATE TRANSITION: " + gameState + " -> " + newState);
+      System.out.println("INVALID STATE TRANSITION: " + m_gameState + " -> " + newState);
     }
   }
 
@@ -593,185 +592,185 @@ public class RobotStateMachine extends SubsystemBase {
   /** Telemetry logging */
   private void updateTelemetry() {
     // Match State
-    SmartDashboard.putString("Match State", matchState.name());
-    SmartDashboard.putString("Match Description", matchState.description);
-    SmartDashboard.putBoolean("Robot Enabled", matchState.enabled);
-    SmartDashboard.putBoolean("Is Autonomous", matchState.autonomous);
+    SmartDashboard.putString("Match State", m_matchState.name());
+    SmartDashboard.putString("Match Description", m_matchState.description);
+    SmartDashboard.putBoolean("Robot Enabled", m_matchState.enabled);
+    SmartDashboard.putBoolean("Is Autonomous", m_matchState.autonomous);
 
     // Game State
-    SmartDashboard.putString("Game State", gameState.name());
-    SmartDashboard.putString("Game Description", gameState.description);
-    SmartDashboard.putBoolean("Is Collecting", gameState.isCollecting());
-    SmartDashboard.putBoolean("Is Scoring", gameState.isScoring());
-    SmartDashboard.putBoolean("Is Navigating", gameState.isNavigating());
-    SmartDashboard.putBoolean("Is Endgame State", gameState.isEndgame());
-    SmartDashboard.putBoolean("Is Climbing", gameState.isClimbing());
-    SmartDashboard.putBoolean("Is Hub Active Mode", gameState.isHubActive());
-    SmartDashboard.putBoolean("Is Hub Inactive Mode", gameState.isHubInactive());
+    SmartDashboard.putString("Game State", m_gameState.name());
+    SmartDashboard.putString("Game Description", m_gameState.description);
+    SmartDashboard.putBoolean("Is Collecting", m_gameState.isCollecting());
+    SmartDashboard.putBoolean("Is Scoring", m_gameState.isScoring());
+    SmartDashboard.putBoolean("Is Navigating", m_gameState.isNavigating());
+    SmartDashboard.putBoolean("Is Endgame State", m_gameState.isEndgame());
+    SmartDashboard.putBoolean("Is Climbing", m_gameState.isClimbing());
+    SmartDashboard.putBoolean("Is Hub Active Mode", m_gameState.isHubActive());
+    SmartDashboard.putBoolean("Is Hub Inactive Mode", m_gameState.isHubInactive());
 
     // Drivetrain Mode
-    SmartDashboard.putString("Drivetrain Mode", driveMode.name);
-    SmartDashboard.putString("Drive Description", driveMode.description);
+    SmartDashboard.putString("Drivetrain Mode", m_driveMode.name);
+    SmartDashboard.putString("Drive Description", m_driveMode.description);
 
     // Fuel State
-    SmartDashboard.putString("Fuel State", fuelState.name());
-    SmartDashboard.putNumber("Fuel Count", fuelCount);
+    SmartDashboard.putString("Fuel State", m_fuelState.name());
+    SmartDashboard.putNumber("Fuel Count", m_fuelCount);
     SmartDashboard.putBoolean("Has Fuel", hasFuel());
     SmartDashboard.putBoolean("Ready to Fire", isReadyToFire());
 
     // Hub Shift State (THE META!)
-    SmartDashboard.putString("Hub Shift State", hubShiftState.name());
-    SmartDashboard.putBoolean("My Hub Active", hubShiftState == HubShiftState.MY_HUB_ACTIVE);
-    SmartDashboard.putBoolean("Is Transition Period", hubShiftState == HubShiftState.TRANSITION);
+    SmartDashboard.putString("Hub Shift State", m_hubShiftState.name());
+    SmartDashboard.putBoolean("My Hub Active", m_hubShiftState == HubShiftState.MY_HUB_ACTIVE);
+    SmartDashboard.putBoolean("Is Transition Period", m_hubShiftState == HubShiftState.TRANSITION);
 
     // Climb State
-    SmartDashboard.putString("Climb State", climbState.name());
-    SmartDashboard.putBoolean("Is Climbing (Climb)", climbState.isClimbing());
-    SmartDashboard.putBoolean("Climb Complete", climbState.isCompleted());
+    SmartDashboard.putString("Climb State", m_climbState.name());
+    SmartDashboard.putBoolean("Is Climbing (Climb)", m_climbState.isClimbing());
+    SmartDashboard.putBoolean("Climb Complete", m_climbState.isCompleted());
 
     // Shooter Status
-    SmartDashboard.putBoolean("Aligned to Target", isAlignedToTarget);
-    SmartDashboard.putBoolean("Shooter at RPM", isShooterAtRPM);
+    SmartDashboard.putBoolean("Aligned to Target", m_isAlignedToTarget);
+    SmartDashboard.putBoolean("Shooter at RPM", m_isShooterAtRPM);
 
     // Alliance & Timing
-    SmartDashboard.putString("Alliance", alliance.description);
+    SmartDashboard.putString("Alliance", m_alliance.description);
     SmartDashboard.putNumber("Time in State", getTimeInState());
     SmartDashboard.putBoolean("Is Endgame Period", isEndgamePeriod());
     SmartDashboard.putBoolean("Is Transition Period", isTransitionPeriod());
 
     // Cycle Statistics
-    SmartDashboard.putNumber("Fuel Scored (Auto)", fuelScoredAuto);
-    SmartDashboard.putNumber("Fuel Scored (Teleop)", fuelScoredTeleop);
+    SmartDashboard.putNumber("Fuel Scored (Auto)", m_fuelScoredAuto);
+    SmartDashboard.putNumber("Fuel Scored (Teleop)", m_fuelScoredTeleop);
     SmartDashboard.putNumber("Total Fuel Scored", getTotalFuelScored());
-    SmartDashboard.putNumber("Intake Cycles", intakeCyclesCompleted);
-    SmartDashboard.putNumber("Scoring Cycles", scoringCyclesCompleted);
+    SmartDashboard.putNumber("Intake Cycles", m_intakeCyclesCompleted);
+    SmartDashboard.putNumber("Scoring Cycles", m_scoringCyclesCompleted);
     SmartDashboard.putNumber("Fastest Cycle Time", getFastestCycleTime());
   }
 
   // ===== GETTERS =====
   public MatchState getMatchState() {
-    return matchState;
+    return m_matchState;
   }
 
   public GameState getGameState() {
-    return gameState;
+    return m_gameState;
   }
 
   public DrivetrainMode getDrivetrainMode() {
-    return driveMode;
+    return m_driveMode;
   }
 
   public AllianceColor getAlliance() {
-    return alliance;
+    return m_alliance;
   }
 
   public FuelState getFuelState() {
-    return fuelState;
+    return m_fuelState;
   }
 
   public HubShiftState getHubShiftState() {
-    return hubShiftState;
+    return m_hubShiftState;
   }
 
   public ClimbState getClimbState() {
-    return climbState;
+    return m_climbState;
   }
 
   public int getFuelCount() {
-    return fuelCount;
+    return m_fuelCount;
   }
 
   public boolean isEnabled() {
-    return matchState.enabled;
+    return m_matchState.enabled;
   }
 
   public boolean isAutonomous() {
-    return matchState.autonomous;
+    return m_matchState.autonomous;
   }
 
   public boolean isTeleop() {
-    return matchState == MatchState.TELEOP_RUNNING
-        || matchState == MatchState.TRANSITION_SHIFT
-        || matchState == MatchState.ENDGAME;
+    return m_matchState == MatchState.TELEOP_RUNNING
+        || m_matchState == MatchState.TRANSITION_SHIFT
+        || m_matchState == MatchState.ENDGAME;
   }
 
   // State queries
   public boolean isInState(MatchState state) {
-    return matchState == state;
+    return m_matchState == state;
   }
 
   public boolean isInState(GameState state) {
-    return gameState == state;
+    return m_gameState == state;
   }
 
   public boolean isInState(DrivetrainMode mode) {
-    return driveMode == mode;
+    return m_driveMode == mode;
   }
 
   public boolean isInState(FuelState state) {
-    return fuelState == state;
+    return m_fuelState == state;
   }
 
   public boolean isInState(HubShiftState state) {
-    return hubShiftState == state;
+    return m_hubShiftState == state;
   }
 
   public boolean isInState(ClimbState state) {
-    return climbState == state;
+    return m_climbState == state;
   }
 
   // ===== FUEL MANAGEMENT =====
   // NOTE: No max capacity!
   public boolean hasFuel() {
-    return fuelCount > 0;
+    return m_fuelCount > 0;
   }
 
   public boolean isEmpty() {
-    return fuelCount == 0;
+    return m_fuelCount == 0;
   }
 
   /** Check if ready to fire (aligned + RPM + has fuel) */
   public boolean isReadyToFire() {
     return hasFuel()
-        && isAlignedToTarget
-        && isShooterAtRPM
-        && (hubShiftState == HubShiftState.MY_HUB_ACTIVE
-            || hubShiftState == HubShiftState.TRANSITION);
+        && m_isAlignedToTarget
+        && m_isShooterAtRPM
+        && (m_hubShiftState == HubShiftState.MY_HUB_ACTIVE
+            || m_hubShiftState == HubShiftState.TRANSITION);
   }
 
   /** Alignment tracking methods */
   public void setAlignedToTarget(boolean aligned) {
-    if (isAlignedToTarget != aligned) {
-      isAlignedToTarget = aligned;
-      SmartDashboard.putBoolean("Aligned to Target", aligned);
-      if (aligned) {
-        rumbleDriver(0.4, 0.15); // Quick rumble - alignment successful
-      }
+    if (m_isAlignedToTarget == aligned) return;
+
+    m_isAlignedToTarget = aligned;
+    SmartDashboard.putBoolean("Aligned to Target", aligned);
+    if (aligned) {
+      rumbleDriver(0.4, 0.15); // Quick rumble - alignment successful
     }
   }
 
   public boolean isAlignedToTarget() {
-    return isAlignedToTarget;
+    return m_isAlignedToTarget;
   }
 
   /** Shooter RPM tracking */
   public void setShooterAtRPM(boolean atRPM) {
-    if (isShooterAtRPM != atRPM) {
-      isShooterAtRPM = atRPM;
+    if (m_isShooterAtRPM != atRPM) {
+      m_isShooterAtRPM = atRPM;
       SmartDashboard.putBoolean("Shooter at RPM", atRPM);
     }
   }
 
   public boolean isShooterAtRPM() {
-    return isShooterAtRPM;
+    return m_isShooterAtRPM;
   }
 
   /** Set fuel state with automatic driver feedback */
   public void setFuelState(FuelState newState) {
-    if (fuelState == newState) return;
+    if (m_fuelState == newState) return;
 
-    FuelState previousState = fuelState;
-    fuelState = newState;
+    FuelState previousState = m_fuelState;
+    m_fuelState = newState;
 
     addToStateHistory("Fuel", previousState.name(), newState.name());
     SmartDashboard.putString("Fuel State", newState.name());
@@ -780,17 +779,17 @@ public class RobotStateMachine extends SubsystemBase {
     switch (newState) {
       case LOADED:
         rumbleDriver(0.3, 0.2); // Short rumble - fuel collected
-        intakeCyclesCompleted++;
+        m_intakeCyclesCompleted++;
         break;
       case EMPTY:
         if (previousState == FuelState.FIRING) {
           rumbleDriver(1.0, 0.5); // Strong rumble - scored!
           if (isAutonomous()) {
-            fuelScoredAuto += fuelCount; // All fuel was scored
+            m_fuelScoredAuto += m_fuelCount; // All fuel was scored
           } else {
-            fuelScoredTeleop += fuelCount;
+            m_fuelScoredTeleop += m_fuelCount;
           }
-          scoringCyclesCompleted++;
+          m_scoringCyclesCompleted++;
           updateCycleTime();
         }
         break;
@@ -801,34 +800,34 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Update fuel count */
   public void setFuelCount(int count) {
-    fuelCount = Math.max(0, count); // Only enforce minimum of 0, NO maximum!
+    m_fuelCount = Math.max(0, count); // Only enforce minimum of 0, NO maximum!
 
     // Update fuel state based on count
-    if (fuelCount == 0) {
+    if (m_fuelCount == 0) {
       setFuelState(FuelState.EMPTY);
     } else {
       setFuelState(FuelState.LOADED); // Has fuel (could be 1 or 100!)
     }
 
-    SmartDashboard.putNumber("Fuel Count", fuelCount);
+    SmartDashboard.putNumber("Fuel Count", m_fuelCount);
   }
 
   /** Add fuel (when collected) */
   public void addFuel(int amount) {
-    setFuelCount(fuelCount + amount);
+    setFuelCount(m_fuelCount + amount);
   }
 
   /** Remove fuel (when fired) */
   public void removeFuel(int amount) {
-    setFuelCount(fuelCount - amount);
+    setFuelCount(m_fuelCount - amount);
   }
 
   /** Set climb state */
   public void setClimbState(ClimbState newState) {
-    if (climbState == newState) return;
+    if (m_climbState == newState) return;
 
-    ClimbState previousState = climbState;
-    climbState = newState;
+    ClimbState previousState = m_climbState;
+    m_climbState = newState;
     addToStateHistory("Climb", previousState.name(), newState.name());
     SmartDashboard.putString("Climb State", newState.name());
 
@@ -844,36 +843,36 @@ public class RobotStateMachine extends SubsystemBase {
 
   /** Register controllers for driver feedback */
   public void registerControllers(CommandXboxController driver, CommandXboxController operator) {
-    this.driverController = driver;
-    this.operatorController = operator;
+    m_driverController = driver;
+    m_operatorController = operator;
   }
 
   /** Rumble driver controller for feedback */
   public void rumbleDriver(double intensity, double durationSeconds) {
-    if (driverController != null) {
-      driverController.getHID().setRumble(RumbleType.kBothRumble, intensity);
-      rumbleEndTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() + durationSeconds;
+    if (m_driverController != null) {
+      m_driverController.getHID().setRumble(RumbleType.kBothRumble, intensity);
+      m_rumbleEndTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() + durationSeconds;
     }
   }
 
   /** Rumble operator controller for feedback */
   public void rumbleOperator(double intensity, double durationSeconds) {
-    if (operatorController != null) {
-      operatorController.getHID().setRumble(RumbleType.kBothRumble, intensity);
-      rumbleEndTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() + durationSeconds;
+    if (m_operatorController != null) {
+      m_operatorController.getHID().setRumble(RumbleType.kBothRumble, intensity);
+      m_rumbleEndTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() + durationSeconds;
     }
   }
 
   /** Check and stop rumble when duration elapsed */
   private void updateRumble() {
-    if (rumbleEndTime > 0 && edu.wpi.first.wpilibj.Timer.getFPGATimestamp() >= rumbleEndTime) {
-      if (driverController != null) {
-        driverController.getHID().setRumble(RumbleType.kBothRumble, 0);
+    if (m_rumbleEndTime > 0 && edu.wpi.first.wpilibj.Timer.getFPGATimestamp() >= m_rumbleEndTime) {
+      if (m_driverController != null) {
+        m_driverController.getHID().setRumble(RumbleType.kBothRumble, 0);
       }
-      if (operatorController != null) {
-        operatorController.getHID().setRumble(RumbleType.kBothRumble, 0);
+      if (m_operatorController != null) {
+        m_operatorController.getHID().setRumble(RumbleType.kBothRumble, 0);
       }
-      rumbleEndTime = 0;
+      m_rumbleEndTime = 0;
     }
   }
 
@@ -881,21 +880,21 @@ public class RobotStateMachine extends SubsystemBase {
   private void addToStateHistory(String stateType, String from, String to) {
     StateHistoryEntry entry =
         new StateHistoryEntry(edu.wpi.first.wpilibj.Timer.getFPGATimestamp(), stateType, from, to);
-    stateHistory.add(entry);
-    if (stateHistory.size() > STATE_HISTORY_SIZE) {
-      stateHistory.remove(0);
+    m_stateHistory.add(entry);
+    if (m_stateHistory.size() > STATE_HISTORY_SIZE) {
+      m_stateHistory.remove(0);
     }
   }
 
   /** Get state history for debugging */
   public List<StateHistoryEntry> getStateHistory() {
-    return new ArrayList<>(stateHistory);
+    return new ArrayList<>(m_stateHistory);
   }
 
   /** Print state history to console */
   public void printStateHistory() {
     System.out.println("=== STATE HISTORY ===");
-    for (StateHistoryEntry entry : stateHistory) {
+    for (StateHistoryEntry entry : m_stateHistory) {
       System.out.println(entry);
     }
     System.out.println("====================");
@@ -904,57 +903,57 @@ public class RobotStateMachine extends SubsystemBase {
   // ===== CYCLE TIME TRACKING =====
   private void updateCycleTime() {
     double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
-    if (lastCycleTime > 0) {
-      double cycleTime = now - lastCycleTime;
-      if (cycleTime < fastestCycleTime && cycleTime > 1.0) {
-        fastestCycleTime = cycleTime;
+    if (m_lastCycleTime > 0) {
+      double cycleTime = now - m_lastCycleTime;
+      if (cycleTime < m_fastestCycleTime && cycleTime > 1.0) {
+        m_fastestCycleTime = cycleTime;
       }
     }
-    lastCycleTime = now;
+    m_lastCycleTime = now;
   }
 
   // Cycle statistics getters
   public int getFuelScoredAuto() {
-    return fuelScoredAuto;
+    return m_fuelScoredAuto;
   }
 
   public int getFuelScoredTeleop() {
-    return fuelScoredTeleop;
+    return m_fuelScoredTeleop;
   }
 
   public int getTotalFuelScored() {
-    return fuelScoredAuto + fuelScoredTeleop;
+    return m_fuelScoredAuto + m_fuelScoredTeleop;
   }
 
   public int getIntakeCyclesCompleted() {
-    return intakeCyclesCompleted;
+    return m_intakeCyclesCompleted;
   }
 
   public int getScoringCyclesCompleted() {
-    return scoringCyclesCompleted;
+    return m_scoringCyclesCompleted;
   }
 
   public double getFastestCycleTime() {
-    return fastestCycleTime == Double.MAX_VALUE ? 0 : fastestCycleTime;
+    return m_fastestCycleTime == Double.MAX_VALUE ? 0 : m_fastestCycleTime;
   }
 
   /** Reset cycle counters (call at match start) */
   public void resetCycleCounters() {
-    fuelScoredAuto = 0;
-    fuelScoredTeleop = 0;
-    intakeCyclesCompleted = 0;
-    scoringCyclesCompleted = 0;
-    lastCycleTime = 0;
-    fastestCycleTime = Double.MAX_VALUE;
-    fuelCount = 0;
-    stateHistory.clear();
-    matchStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+    m_fuelScoredAuto = 0;
+    m_fuelScoredTeleop = 0;
+    m_intakeCyclesCompleted = 0;
+    m_scoringCyclesCompleted = 0;
+    m_lastCycleTime = 0;
+    m_fastestCycleTime = Double.MAX_VALUE;
+    m_fuelCount = 0;
+    m_stateHistory.clear();
+    m_matchStartTime = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
   }
 
   /** Get match elapsed time */
   public double getMatchElapsedTime() {
-    return matchStartTime == 0
+    return m_matchStartTime == 0
         ? 0
-        : edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - matchStartTime;
+        : edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - m_matchStartTime;
   }
 }
