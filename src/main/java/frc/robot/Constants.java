@@ -4,6 +4,11 @@
 
 package frc.robot;
 
+import edu.wpi.first.units.AngularAccelerationUnit;
+import edu.wpi.first.units.measure.*;
+
+import static edu.wpi.first.units.Units.*;
+
 /**
  * Constants for FRC 2026 REBUILT season Contains game-specific values, timing, and robot
  * configuration
@@ -45,6 +50,10 @@ public final class Constants {
 
     // Deadband for joystick inputs
     public static final double JOYSTICK_DEADBAND = 0.1;
+  }
+
+  public static final class RobotConstants {
+    public static final Time TARGET_LOOP_TIME = Milliseconds.of(20.0);
   }
 
   /** Drivetrain constants */
@@ -128,6 +137,38 @@ public final class Constants {
         0.5; // REPLACE with actual height of Limelight from floor
     public static final double TARGET_HEIGHT_METERS = 1.64; // Height of the Hub opening
     public static final double CAMERA_ANGLE_DEGREES = 30.0; // REPLACE with Limelight mount angle
+
+    public static final int PIVOT_ENCODER_ID = 1; // TODO: Make real
+    public static final int PIVOT_MOTOR_ID = 2; // TODO: Make real
+    public static final Angle PIVOT_MAX_POSITION = Rotations.of(0.0); // TODO: Tune
+    public static final Angle PIVOT_STOWED_POSITION = Rotations.of(0.5); // TODO: Tune
+
+    public static final Angle SETPOINT_TOLERANCE = Degrees.of(5.0); // TODO: Tune
+
+    public static final Time PIVOT_HOMING_DEBOUNCE_TIME = Milliseconds.of(100.0);
+    // Assuming 20ms loop time
+    public static final int PIVOT_HOMING_RING_BUFFER_SIZE = (int) PIVOT_HOMING_DEBOUNCE_TIME.div(RobotConstants.TARGET_LOOP_TIME).in(Value);
+    public static final Current PIVOT_HOMING_SUPPLY_CURRENT_LIMIT = Amps.of(10);
+    public static final Time PIVOT_HOMING_TIMEOUT = Seconds.of(2.0);
+
+    public static final AngularVelocity PIVOT_VELOCITY = RotationsPerSecond.of(0.5);
+    public static final AngularAcceleration PIVOT_ACCELERATION = RotationsPerSecondPerSecond.of(1);
+    public static final Velocity<AngularAccelerationUnit> PIVOT_JERK =
+            RotationsPerSecondPerSecond.per(Second).of(0);
+
+    public static final Voltage PIVOT_HOMING_VOLTAGE = Volts.of(2.0);
+    public static final Current PIVOT_HOMING_CURRENT_LIMIT = Amps.of(10.0);
+    public static final AngularVelocity PIVOT_HOMING_VELOCITY_LIMIT = RotationsPerSecond.of(0.25);
+
+    public static final double PIVOT_kA = 0;
+    public static final double PIVOT_kS = 0;
+    public static final double PIVOT_kG = 0;
+    public static final double PIVOT_kP = 0;
+    public static final double PIVOT_kI = 0;
+    public static final double PIVOT_kD = 0;
+    public static final double PIVOT_kV = 0;
+
+    public static final Current SUPPLY_CURRENT_LIMIT = Amps.of(40);
 
     // Lookup Table: { Distance(Meters), RPM }
     // MUST BE TUNED, measure distance, find best RPM, add to list.
