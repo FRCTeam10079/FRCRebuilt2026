@@ -21,12 +21,13 @@ import frc.robot.pathfinding.Pathfinding;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.IndexerSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
-import frc.robot.subsystems.PivotIntake.IntakeSubsystem;
+import frc.robot.subsystems.PivotIntake.IntakeWheelsSubsystem;
 import frc.robot.subsystems.PivotIntake.PivotSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 
 /**
- * RobotContainer for FRC 2026 REBUILT season This class is where the robot's subsystems, commands,
+ * RobotContainer for FRC 2026 REBUILT season This class is where the robot's
+ * subsystems, commands,
  * and button bindings are defined.
  */
 public class RobotContainer {
@@ -48,11 +49,10 @@ public class RobotContainer {
   private final IndexerSubsystem indexer = new IndexerSubsystem();
   private final PivotSubsystem pivot = new PivotSubsystem();
   // Mechanisms
-  private final IntakeSubsystem intake = new IntakeSubsystem();
+  private final IntakeWheelsSubsystem intake = new IntakeWheelsSubsystem();
   public final ShooterSubsystem shooter = new ShooterSubsystem();
 
-  private final Telemetry m_telemetry =
-      new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
+  private final Telemetry m_telemetry = new Telemetry(TunerConstants.kSpeedAt12Volts.in(MetersPerSecond));
 
   public RobotContainer() {
     // Link limelight to drivetrain for vision-based odometry
@@ -71,7 +71,8 @@ public class RobotContainer {
   }
 
   /**
-   * Initialize the pathfinding system. This loads the navgrid and starts the background AD*
+   * Initialize the pathfinding system. This loads the navgrid and starts the
+   * background AD*
    * planning thread.
    */
   private void initializePathfinding() {
@@ -81,7 +82,8 @@ public class RobotContainer {
   }
 
   /**
-   * Configure button bindings for driver and operator controllers This is where you bind controller
+   * Configure button bindings for driver and operator controllers This is where
+   * you bind controller
    * buttons to commands
    */
   private void configureBindings() {
@@ -145,9 +147,15 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController
+    // Intake In
+    m_operatorController
         .x()
         .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
+    // Intake Out
+    m_operatorController
+        .a()
+        .toggleOnTrue(new StartEndCommand(() -> intake.intakeOut(), () -> intake.stop(), intake));
+
     // TODO: Add climb controls
 
     // ==================== PATHFINDING CONTROLS ====================
@@ -224,7 +232,8 @@ public class RobotContainer {
   }
 
   /**
-   * Returns the autonomous command to run during autonomous period. Uses pathfinding to navigate to
+   * Returns the autonomous command to run during autonomous period. Uses
+   * pathfinding to navigate to
    * AprilTag 10 (Red Alliance Hub).
    */
   public Command getAutonomousCommand() {
@@ -238,10 +247,13 @@ public class RobotContainer {
   /**
    * Compute the target heading to face the currently visible AprilTag.
    *
-   * <p>If a tag is visible, returns current heading - TX (to center the tag). If no tag visible,
+   * <p>
+   * If a tag is visible, returns current heading - TX (to center the tag). If no
+   * tag visible,
    * returns the current heading (maintain position).
    *
-   * <p>This is used by the heading lock test to dynamically track AprilTags.
+   * <p>
+   * This is used by the heading lock test to dynamically track AprilTags.
    */
   private double computeAprilTagHeading() {
     if (limelight.hasTarget()) {

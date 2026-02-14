@@ -11,14 +11,12 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.IntakeConstants;
 import frc.robot.generated.TunerConstants;
 
-public class IntakeSubsystem extends SubsystemBase {
+public class IntakeWheelsSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor =
-      new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
-  private final VelocityVoltage m_velocityRequest =
-      new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
+  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
+  private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
 
-  public IntakeSubsystem() {
+  public IntakeWheelsSubsystem() {
     configureIntakeMotor();
   }
 
@@ -48,6 +46,12 @@ public class IntakeSubsystem extends SubsystemBase {
         m_velocityRequest.withVelocity(IntakeConstants.Wheels.INTAKE_RPM * 60.0));
   }
 
+  public void intakeOut() {
+    // conversion of RPM to RPS
+    intakeMotor.setControl(
+        m_velocityRequest.withVelocity(IntakeConstants.Wheels.INTAKEOUT_RPM * 60.0));
+  }
+
   public void stop() {
     intakeMotor.setControl(m_velocityRequest.withVelocity(0));
   }
@@ -55,5 +59,10 @@ public class IntakeSubsystem extends SubsystemBase {
   // Intake Wheel Spin Command
   public Command runIntakeOnce() {
     return Commands.runOnce(() -> intakeIn(), this);
+  }
+
+  // Intake Wheel Reverse Command
+  public Command runIntakeOutOnce() {
+    return Commands.runOnce(() -> intakeOut(), this);
   }
 }

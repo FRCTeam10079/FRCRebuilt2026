@@ -123,6 +123,7 @@ public final class Constants {
       public static final int STATOR_CURRENT_LIMIT = 80;
 
       public static final double INTAKE_RPM = 800;
+      public static final double INTAKEOUT_RPM = -800;
 
       // TUNE ALL:
       public static final double KA = 0;
