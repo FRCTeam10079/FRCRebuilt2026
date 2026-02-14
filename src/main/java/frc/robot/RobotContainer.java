@@ -10,7 +10,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.StartEndCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.AlignPosition;
@@ -88,7 +87,7 @@ public class RobotContainer {
     drivetrain.setDefaultCommand(drivetrain.smoothTeleopDriveCommand(
         () -> m_driverController.getLeftY(), // Forward/backward
         () -> m_driverController.getLeftX(), // Left/right strafe
-        () -> m_driverController.getRightX(), // Rotation
+        () -> -m_driverController.getRightX(), // Rotation
         Constants.DrivetrainConstants.MAX_SPEED_MPS,
         Constants.DrivetrainConstants.MAX_ANGULAR_RATE_RAD_PER_SEC));
 
@@ -144,9 +143,10 @@ public class RobotContainer {
 
     // ==================== OPERATOR CONTROLS ====================
     // TODO: Add intake controls
-    m_driverController
-        .x()
-        .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () -> intake.stop(), intake));
+    // m_driverController
+    // .x()
+    // .toggleOnTrue(new StartEndCommand(() -> intake.intakeIn(), () ->
+    // intake.stop(), intake));
     // TODO: Add climb controls
 
     // ==================== PATHFINDING CONTROLS ====================

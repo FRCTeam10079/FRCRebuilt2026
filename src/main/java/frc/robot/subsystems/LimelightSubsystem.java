@@ -87,7 +87,8 @@ public class LimelightSubsystem extends SubsystemBase {
   @Deprecated
   public void setUseLimelightForOdometry(boolean enable) {
     // Vision updates are now consolidated in CommandSwerveDrivetrain.updateVision()
-    // This prevents duplicate vision measurements and ensures consistent std dev calculations
+    // This prevents duplicate vision measurements and ensures consistent std dev
+    // calculations
     this.useLimelightForOdometry = false; // Always disabled - drivetrain handles vision
   }
 
@@ -103,7 +104,8 @@ public class LimelightSubsystem extends SubsystemBase {
 
     // WATCH OUT! Vision-based odometry updates are now handled in
     // CommandSwerveDrivetrain.updateVision()
-    // This prevents duplicate measurements and ensures proper MegaTag2 integration with:
+    // This prevents duplicate measurements and ensures proper MegaTag2 integration
+    // with:
     // - SetRobotOrientation called before reading pose
     // - Dynamic standard deviations based on tag distance/count
     // - Angular velocity rejection for MegaTag2 accuracy

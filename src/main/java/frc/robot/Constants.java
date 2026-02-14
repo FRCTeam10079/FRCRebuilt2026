@@ -107,8 +107,8 @@ public final class Constants {
    */
   public static final class ShooterConstants {
     // CAN IDs for shooter motors
-    public static final int MASTER_MOTOR_ID = 18; // TODO: Set actual CAN ID
-    public static final int SLAVE_MOTOR_ID = 21; // TODO: Set actual CAN ID
+    public static final int MASTER_MOTOR_ID = 7; // TODO: Set actual CAN ID
+    public static final int SLAVE_MOTOR_ID = 20; // TODO: Set actual CAN ID
 
     // Target RPM values
     public static final double SHOOTER_IDLE_RPM = 0;

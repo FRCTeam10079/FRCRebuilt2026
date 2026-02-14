@@ -20,10 +20,10 @@ public final class PathfindingConstants {
 
   // ==================== ROBOT PHYSICS ====================
   /** Robot width with bumpers in inches */
-  public static final double ROBOT_WIDTH_INCHES = 33.0;
+  public static final double ROBOT_WIDTH_INCHES = 31.5;
 
   /** Robot length with bumpers in inches */
-  public static final double ROBOT_LENGTH_INCHES = 34.0;
+  public static final double ROBOT_LENGTH_INCHES = 36.5;
 
   /** Robot diagonal (worst-case rotation footprint) in meters */
   public static final double ROBOT_DIAGONAL_METERS = Units.inchesToMeters(Math.sqrt(

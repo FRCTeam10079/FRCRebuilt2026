@@ -118,6 +118,16 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
       new SysIdRoutine.Mechanism(
           volts -> setControl(m_steerCharacterization.withVolts(volts)), null, this));
 
+  // ==================== VISION DEBUG STATE ====================
+  // Tracking fields for throttled console logging and change detection.
+  // These let instrumentVision() detect status transitions, tag-count changes,
+  // and pose jumps without any extra NetworkTables traffic.
+  private long m_lastVisionLogMs = 0;
+  private String m_lastVisionStatus = "";
+  private int m_lastVisionTagCount = -1;
+  private double m_lastAcceptedVisionX = Double.NaN;
+  private double m_lastAcceptedVisionY = Double.NaN;
+
   // ==================== VISION LOCALIZATION WITH MEGATAG2 ====================
   /**
    * Updates robot pose estimation using Limelight MegaTag2 vision measurements. This method: 1.
@@ -130,6 +140,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     var driveState = getState();
     double headingDeg = driveState.Pose.getRotation().getDegrees();
     double angularVelocityDegPerSec = Math.toDegrees(driveState.Speeds.omegaRadiansPerSecond);
+    Pose2d odoPose = driveState.Pose;
 
     // Log that vision update is running
     SmartDashboard.putNumber("Vision/HeadingDeg", headingDeg);
@@ -154,12 +165,14 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Validate measurement exists
     if (mt2Estimate == null) {
       SmartDashboard.putString("Vision/Status", "NULL_ESTIMATE");
+      instrumentVision("NULL", null, odoPose);
       return;
     }
 
     // Check for stale/default timestamp (timestamp = 0 means no valid data)
     if (mt2Estimate.timestampSeconds == 0) {
       SmartDashboard.putString("Vision/Status", "STALE_TIMESTAMP");
+      instrumentVision("STALE", mt2Estimate, odoPose);
       return;
     }
 
@@ -173,6 +186,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     // Reject if no tags detected
     if (mt2Estimate.tagCount == 0) {
       SmartDashboard.putString("Vision/Status", "NO_TAGS");
+      instrumentVision("NO_TAGS", mt2Estimate, odoPose);
       return;
     }
 
@@ -181,6 +195,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     if (Math.abs(angularVelocityDegPerSec)
         > frc.robot.Constants.VisionConstants.MAX_ANGULAR_VELOCITY_DEG_PER_SEC) {
       SmartDashboard.putString("Vision/Status", "ANGULAR_VEL_TOO_HIGH");
+      instrumentVision("ANG_VEL", mt2Estimate, odoPose);
       return;
     }
 
@@ -193,6 +208,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         || y < -margin
         || y > frc.robot.Constants.VisionConstants.FIELD_WIDTH_METERS + margin) {
       SmartDashboard.putString("Vision/Status", "OUT_OF_BOUNDS");
+      instrumentVision("OOB", mt2Estimate, odoPose);
       return;
     }
 
@@ -226,11 +242,144 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     SmartDashboard.putNumber("Vision/XYStdDev", xyStdDev);
     SmartDashboard.putNumber("Vision/FPGATimestamp", fpgaTimestamp);
     SmartDashboard.putString("Vision/Status", "ACCEPTED");
+    instrumentVision("ACCEPTED", mt2Estimate, odoPose);
 
     // Call the instance method (this.) which uses our overridden version
     // The override applies Utils.fpgaToCurrentTime() to convert FPGA time to CTRE
     // time
     this.addVisionMeasurement(mt2Estimate.pose, fpgaTimestamp, visionStdDevs);
+  }
+
+  // ==================== VISION DEBUG INSTRUMENTATION ====================
+  /**
+   * Publishes a vision diagnostic snapshot to SmartDashboard (under "LL/") and prints a throttled
+   * console line with the "[LLDBG]" prefix.
+   *
+   * <p>Console output fires at ~4 Hz (every 250 ms) under steady state, but immediately on any
+   * status change, tag-count change, or pose jump (>0.5 m between consecutive accepted poses).
+   *
+   * <p>This method is observation-only: it does NOT modify any filter thresholds, reject/accept
+   * decisions, or estimator inputs.
+   *
+   * @param status Short status label matching the decision that was just made in updateVision()
+   * @param est The MegaTag2 PoseEstimate (may be null for NULL status)
+   * @param odoPose Current odometry pose for comparison with the vision pose
+   */
+  private void instrumentVision(String status, LimelightHelpers.PoseEstimate est, Pose2d odoPose) {
+
+    long nowMs = System.currentTimeMillis();
+
+    // --- Extract what we can from the estimate (may be null) ---
+    int tagCount = 0;
+    double vx = 0, vy = 0, vyaw = 0;
+    double avgDist = 0, latencyMs = 0;
+    boolean isMt2 = false;
+    StringBuilder idsBuf = new StringBuilder("[");
+    StringBuilder ambBuf = new StringBuilder("[");
+    double maxAmbiguity = 0;
+
+    if (est != null) {
+      tagCount = est.tagCount;
+      avgDist = est.avgTagDist;
+      latencyMs = est.latency;
+      isMt2 = est.isMegaTag2;
+
+      if (est.pose != null) {
+        vx = est.pose.getX();
+        vy = est.pose.getY();
+        vyaw = est.pose.getRotation().getDegrees();
+      }
+
+      if (est.rawFiducials != null) {
+        for (int i = 0; i < est.rawFiducials.length; i++) {
+          if (i > 0) {
+            idsBuf.append(",");
+            ambBuf.append(",");
+          }
+          idsBuf.append(est.rawFiducials[i].id);
+          ambBuf.append(String.format("%.3f", est.rawFiducials[i].ambiguity));
+          maxAmbiguity = Math.max(maxAmbiguity, est.rawFiducials[i].ambiguity);
+        }
+      }
+    }
+
+    String tagIds = idsBuf.append("]").toString();
+    String ambiguities = ambBuf.append("]").toString();
+
+    double ox = odoPose.getX();
+    double oy = odoPose.getY();
+    double oyaw = odoPose.getRotation().getDegrees();
+
+    // Delta between where vision thinks we are and where odometry thinks we are
+    double poseDelta = (est != null && est.pose != null) ? Math.hypot(vx - ox, vy - oy) : 0;
+
+    // Pipeline index - cheap NetworkTables read
+    double pipeline = LimelightHelpers.getCurrentPipelineIndex(
+        frc.robot.Constants.VisionConstants.LIMELIGHT_NAME);
+
+    // --- Dashboard (every call - these are cheap NT writes) ---
+    SmartDashboard.putString("LL/Status", status);
+    SmartDashboard.putNumber("LL/TagCount", tagCount);
+    SmartDashboard.putString("LL/TagIDs", tagIds);
+    SmartDashboard.putNumber("LL/MaxAmbiguity", maxAmbiguity);
+    SmartDashboard.putNumber("LL/VisionX", vx);
+    SmartDashboard.putNumber("LL/VisionY", vy);
+    SmartDashboard.putNumber("LL/VisionYaw", vyaw);
+    SmartDashboard.putNumber("LL/OdometryX", ox);
+    SmartDashboard.putNumber("LL/OdometryY", oy);
+    SmartDashboard.putNumber("LL/OdometryYaw", oyaw);
+    SmartDashboard.putNumber("LL/PoseDelta", poseDelta);
+    SmartDashboard.putNumber("LL/Pipeline", pipeline);
+    SmartDashboard.putNumber("LL/Latency", latencyMs);
+    SmartDashboard.putBoolean("LL/IsMegaTag2", isMt2);
+
+    // --- Pose-jump detection (between consecutive ACCEPTED poses) ---
+    double jumpDist = 0;
+    boolean jumped = false;
+    if ("ACCEPTED".equals(status) && !Double.isNaN(m_lastAcceptedVisionX)) {
+      jumpDist = Math.hypot(vx - m_lastAcceptedVisionX, vy - m_lastAcceptedVisionY);
+      jumped = jumpDist > 0.5;
+    }
+    SmartDashboard.putNumber("LL/JumpDist", jumpDist);
+    SmartDashboard.putBoolean("LL/Jumped", jumped);
+
+    // --- Console logging (throttled unless something notable happened) ---
+    boolean statusChanged = !status.equals(m_lastVisionStatus);
+    boolean tagCountChanged = tagCount != m_lastVisionTagCount;
+    boolean shouldLog =
+        jumped || statusChanged || tagCountChanged || (nowMs - m_lastVisionLogMs >= 250);
+
+    if (shouldLog) {
+      String jumpFlag = jumped ? String.format("*** JUMP %.2fm *** ", jumpDist) : "";
+      System.out.printf(
+          "[LLDBG] %sst=%s n=%d ids=%s amb=%s vp=(%.2f,%.2f,%.1f)"
+              + " op=(%.2f,%.2f,%.1f) dM=%.2f avgD=%.1f lat=%.0fms pipe=%.0f mt2=%s%n",
+          jumpFlag,
+          status,
+          tagCount,
+          tagIds,
+          ambiguities,
+          vx,
+          vy,
+          vyaw,
+          ox,
+          oy,
+          oyaw,
+          poseDelta,
+          avgDist,
+          latencyMs,
+          pipeline,
+          isMt2 ? "Y" : "N");
+      m_lastVisionLogMs = nowMs;
+    }
+
+    // --- Update tracking state ---
+    m_lastVisionStatus = status;
+    m_lastVisionTagCount = tagCount;
+    if ("ACCEPTED".equals(status)) {
+      m_lastAcceptedVisionX = vx;
+      m_lastAcceptedVisionY = vy;
+    }
   }
 
   /*
