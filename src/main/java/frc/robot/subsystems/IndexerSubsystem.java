@@ -8,53 +8,50 @@ import frc.robot.Constants.IndexerConstants;
 import frc.robot.generated.TunerConstants;
 
 public class IndexerSubsystem extends SubsystemBase {
-
-  private final TalonFX feederMotor;
-  // private final TalonFX spindexerMotor; // Follower commented out to see if it helps with issues
+  // Use the generated CANBus instance instead of the deprecated String-based
+  // constructor
+  private final TalonFX m_feederMotor =
+      new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
+  // // Follower commented out to see if it helps with issues
+  // private final TalonFX m_spindexerMotor;
 
   public IndexerSubsystem() {
-    // Use the generated CANBus instance instead of the deprecated String-based constructor
-    feederMotor = new TalonFX(IndexerConstants.kFeederMotorID, TunerConstants.kCANBus);
-    // spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus); // Commented out
-    // to see if it helps with issues
+    // // Commented out to see if it helps with issues
+    // m_spindexerMotor = new TalonFX(IndexerConstants.kSpindexerMotorID, kCANbus);
 
-    TalonFXConfiguration config = new TalonFXConfiguration();
+    var config = new TalonFXConfiguration();
 
     // Stator Current Limit
     config.CurrentLimits.StatorCurrentLimit = IndexerConstants.kCurrentLimit; // 40A
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
 
     // Supply limit
-    // Prevents the motor from drawing too much from   the battery and browning out the robot.
+    // Prevents the motor from drawing too much from the battery and browning out
+    // the robot.
     config.CurrentLimits.SupplyCurrentLimit = 40; // 30 Amps from battery
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-
-    // Ramp rate for protection
-    config.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0; // 0.25 seconds to full speed
-    config.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0;
 
     // Brake Mode
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
     // Apply config to the LEADER
-    feederMotor.getConfigurator().apply(config);
+    m_feederMotor.getConfigurator().apply(config);
 
     // Configure the FOLLOWER
     // We apply the same safety config to the follower too, just to be safe.
     // Commented out to see if it helps with issues
-    // spindexerMotor.getConfigurator().apply(config);
+    // m_spindexerMotor.getConfigurator().apply(config);
 
     // Tell the follower to listen to the leader
     // Commented out to see if it helps with issues
-    // spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID, false));
+    // m_spindexerMotor.setControl(new Follower(IndexerConstants.kFeederMotorID,
+    // false));
   }
 
   public void setSpeed(double speed) {
     // Only command the leader, follow does it automatically
-    feederMotor.set(speed);
+    m_feederMotor.set(speed);
   }
 
   public void stop() {
-    feederMotor.stopMotor();
+    m_feederMotor.stopMotor();
   }
 }

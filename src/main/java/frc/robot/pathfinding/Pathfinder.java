@@ -10,7 +10,6 @@ import java.util.List;
  * <p>The pathfinder runs in a background thread and produces paths asynchronously.
  */
 public interface Pathfinder {
-
   /**
    * Get if a new path has been calculated since the last time a path was retrieved.
    *

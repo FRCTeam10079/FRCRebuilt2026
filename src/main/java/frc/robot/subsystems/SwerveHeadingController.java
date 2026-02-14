@@ -22,7 +22,6 @@ import frc.robot.Constants.HeadingControllerConstants;
  * representing rotational velocity demand
  */
 public class SwerveHeadingController {
-
   // ==================== STATE MACHINE ====================
   public enum HeadingControllerState {
     OFF, // No heading control - return 0 rotation
@@ -32,19 +31,17 @@ public class SwerveHeadingController {
 
   private HeadingControllerState m_state = HeadingControllerState.OFF;
 
-  private final PIDController m_pidController;
+  // PID with SNAP gains (will be updated based on state)
+  private final PIDController m_pidController = new PIDController(
+      HeadingControllerConstants.SNAP_KP,
+      HeadingControllerConstants.SNAP_KI,
+      HeadingControllerConstants.SNAP_KD);
 
   private double m_goalDegrees = 0.0;
   private double m_lastOutputTimestamp = 0.0;
 
   /** Creates a new SwerveHeadingController */
   public SwerveHeadingController() {
-    // Initialize PID with SNAP gains (will be updated based on state)
-    m_pidController = new PIDController(
-        HeadingControllerConstants.SNAP_KP,
-        HeadingControllerConstants.SNAP_KI,
-        HeadingControllerConstants.SNAP_KD);
-
     // Enable continuous input for angle wrapping (-180 to 180)
     m_pidController.enableContinuousInput(-180, 180);
 

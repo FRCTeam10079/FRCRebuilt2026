@@ -15,7 +15,6 @@ import frc.robot.Constants.AprilTagMaps;
  * 0.602m Inflation radius: 0.65m (3.25 grid cells) provides ~5cm buffer for safe rotation
  */
 public final class PathfindingConstants {
-
   private PathfindingConstants() {}
 
   // ==================== ROBOT PHYSICS ====================
@@ -95,13 +94,12 @@ public final class PathfindingConstants {
     double tagYawDegrees = tagData[3];
 
     // Tag faces outward, robot needs to face toward the tag
-    Rotation2d tagFacing = Rotation2d.fromDegrees(tagYawDegrees);
+    var tagFacing = Rotation2d.fromDegrees(tagYawDegrees);
     Rotation2d robotFacing = tagFacing.plus(Rotation2d.k180deg);
 
     // Calculate standoff position (move back from tag along its facing direction)
-    Translation2d tagPosition = new Translation2d(tagX, tagY);
-    Translation2d standoffOffset =
-        new Translation2d(SCORING_STANDOFF_METERS, 0).rotateBy(tagFacing);
+    var tagPosition = new Translation2d(tagX, tagY);
+    var standoffOffset = new Translation2d(SCORING_STANDOFF_METERS, 0).rotateBy(tagFacing);
     Translation2d scoringPosition = tagPosition.plus(standoffOffset);
 
     // === DEBUG LOGGING ===

@@ -10,7 +10,6 @@ package frc.robot.pathfinding;
  * @param y Y index in the grid (row)
  */
 public record GridPosition(int x, int y) implements Comparable<GridPosition> {
-
   /**
    * Calculate the Euclidean distance to another grid position.
    *

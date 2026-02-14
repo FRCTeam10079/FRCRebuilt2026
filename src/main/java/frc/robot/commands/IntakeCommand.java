@@ -4,22 +4,21 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.IntakeSubsystem;
 
 public class IntakeCommand extends Command {
-
-  private final IntakeSubsystem intake;
+  private final IntakeSubsystem m_intake;
 
   public IntakeCommand(IntakeSubsystem intake) {
-    this.intake = intake;
+    m_intake = intake;
     addRequirements(intake);
   }
 
   @Override
   public void initialize() {
-    intake.intakeIn();
+    m_intake.intakeIn();
   }
 
   @Override
   public void end(boolean interrupted) {
-    intake.stop();
+    m_intake.stop();
   }
 
   @Override

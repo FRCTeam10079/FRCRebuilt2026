@@ -4,14 +4,12 @@
 
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -31,13 +29,12 @@ import frc.robot.generated.TunerConstants;
  * motor sections if we switch to a 2-motor setup.
  */
 public class ShooterSubsystem extends SubsystemBase {
-
-  private final TalonFX m_masterMotor;
+  private final TalonFX m_masterMotor =
+      new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
   // DUAL MOTOR: Uncomment for 2-motor setup
   // private final TalonFX m_slaveMotor;
 
-  private final VelocityVoltage m_velocityRequest =
-      new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
+  private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0);
   private final NeutralOut m_neutralRequest = new NeutralOut();
   // DUAL MOTOR: Uncomment for 2-motor setup
   // private final Follower m_followerRequest;
@@ -55,7 +52,6 @@ public class ShooterSubsystem extends SubsystemBase {
 
   /** Creates a new ShooterSubsystem */
   public ShooterSubsystem() {
-    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, TunerConstants.kCANBus);
     // DUAL MOTOR: Uncomment for 2-motor setup
     // m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID, "canivore");
 
@@ -74,20 +70,6 @@ public class ShooterSubsystem extends SubsystemBase {
 
     // Motor direction - NEEDS TO BE ADJUSTED BASED ON WHAT MECH PUTS
     masterConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
-    masterConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast; // Coast when neutral
-
-    // Current limits
-    // Stator current = torque output. Low stator limits = slow acceleration.
-    // Phoenix 6 docs says 80A stator limit cuts acceleration by 56%! :O
-    // We use a high stator on the flywheels (120A+) since no risk of wheel slip.
-    // Supply current = battery draw. We need to limit this to prevent brownouts.
-    masterConfig.CurrentLimits = new CurrentLimitsConfigs()
-        .withSupplyCurrentLimitEnable(true)
-        .withSupplyCurrentLimit(70) // Continuous supply limit (battery)
-        .withSupplyCurrentLowerLimit(40) // Reduced limit after sustained draw
-        .withSupplyCurrentLowerTime(1.0) // Time at limit before reducing
-        .withStatorCurrentLimitEnable(true)
-        .withStatorCurrentLimit(120); // High stator = max torque/accel!
 
     // Velocity PID gains (Slot 0)
     // THESE VALUES NEED TO BE TUNED FOR THE ROBOT
@@ -97,9 +79,7 @@ public class ShooterSubsystem extends SubsystemBase {
     masterConfig.Slot0 = new Slot0Configs()
         .withKS(ShooterConstants.SHOOTER_KS)
         .withKV(ShooterConstants.SHOOTER_KV)
-        .withKP(ShooterConstants.SHOOTER_KP)
-        .withKI(0)
-        .withKD(0);
+        .withKP(ShooterConstants.SHOOTER_KP);
 
     // Apply configuration
     m_masterMotor.getConfigurator().apply(masterConfig);
@@ -111,9 +91,7 @@ public class ShooterSubsystem extends SubsystemBase {
     //
     // // Current limits for slave (same as master)
     // slaveConfig.CurrentLimits = new CurrentLimitsConfigs()
-    // .withSupplyCurrentLimitEnable(true)
     // .withSupplyCurrentLimit(40)
-    // .withStatorCurrentLimitEnable(true)
     // .withStatorCurrentLimit(80);
     //
     // m_slaveMotor.getConfigurator().apply(slaveConfig);
@@ -122,11 +100,10 @@ public class ShooterSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     // Read current velocity from motor
-    double currentRPS = m_masterMotor.getVelocity().getValueAsDouble();
-    double currentRPM = currentRPS * 60.0;
+    double currentRPM = getCurrentRPM();
 
     // Update stability counter (debouncing logic)
-    if (m_isEnabled && m_targetRPM > 0) {
+    if (m_isEnabled && m_targetRPM != 0) {
       double error = Math.abs(m_targetRPM - currentRPM);
       if (error <= ShooterConstants.SHOOTER_RPM_TOLERANCE) {
         // Within tolerance - increment counter (capped at required cycles)
@@ -135,19 +112,16 @@ public class ShooterSubsystem extends SubsystemBase {
         // Outside tolerance - reset counter
         m_stabilityCounter = 0;
       }
-    } else {
-      // Shooter disabled - reset counter
-      m_stabilityCounter = 0;
-    }
 
-    // Apply control to motors
-    if (m_isEnabled && m_targetRPM > 0) {
       // Convert RPM to RPS for Phoenix 6
       double targetRPS = m_targetRPM / 60.0;
       m_masterMotor.setControl(m_velocityRequest.withVelocity(targetRPS));
       // DUAL MOTOR: Uncomment for 2-motor setup
       // m_slaveMotor.setControl(m_followerRequest);
     } else {
+      // Shooter disabled - reset counter
+      m_stabilityCounter = 0;
+
       // Coast when disabled
       m_masterMotor.setControl(m_neutralRequest);
       // DUAL MOTOR: Uncomment for 2-motor setup
@@ -211,7 +185,7 @@ public class ShooterSubsystem extends SubsystemBase {
    * @return true if shooter is spun up AND has been stable for sufficient time
    */
   public boolean isReady() {
-    return m_isEnabled && m_targetRPM > 0 && m_stabilityCounter >= STABILITY_CYCLES_REQUIRED;
+    return m_isEnabled && m_targetRPM != 0 && m_stabilityCounter == STABILITY_CYCLES_REQUIRED;
   }
 
   /**
@@ -221,11 +195,9 @@ public class ShooterSubsystem extends SubsystemBase {
    * @return true if current RPM is within tolerance of target
    */
   public boolean isAtSetpoint() {
-    if (!m_isEnabled || m_targetRPM <= 0) {
-      return false;
-    }
-    double currentRPM = m_masterMotor.getVelocity().getValueAsDouble() * 60.0;
-    return Math.abs(m_targetRPM - currentRPM) <= ShooterConstants.SHOOTER_RPM_TOLERANCE;
+    return m_isEnabled
+        && m_targetRPM != 0
+        && Math.abs(m_targetRPM - getCurrentRPM()) <= ShooterConstants.SHOOTER_RPM_TOLERANCE;
   }
 
   /** @return Current flywheel velocity in RPM */

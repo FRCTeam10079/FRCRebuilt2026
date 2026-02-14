@@ -9,7 +9,6 @@ package frc.robot;
  * configuration
  */
 public final class Constants {
-
   /** Game timing constants for REBUILT */
   public static final class GameConstants {
     // Match period durations (seconds)

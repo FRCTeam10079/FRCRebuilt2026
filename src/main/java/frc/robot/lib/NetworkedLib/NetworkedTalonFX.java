@@ -13,83 +13,84 @@ import com.ctre.phoenix6.hardware.TalonFX;
 public class NetworkedTalonFX extends TalonFX {
   private static int instanceCount;
 
-  private String name;
+  private String m_name;
 
-  // networked prefix to just to avoid ambigiouity between actual values and their networked
+  // networked prefix to just to avoid ambigiouity between actual values and their
+  // networked
   // partners
-  private NetworkedDouble networkedKA; // acceleration gain
-  private NetworkedDouble networkedkD; // derivative gain
-  private NetworkedDouble networkedkG; // gravity gain
-  private NetworkedDouble networkedkI; // integral gain
-  private NetworkedDouble networkedkP; // proprotional gain
-  private NetworkedDouble networkedKS; // static constant (static friction)
-  private NetworkedDouble networkedKV; // velo feed forward
+  private NetworkedDouble m_networkedKA; // acceleration gain
+  private NetworkedDouble m_networkedkD; // derivative gain
+  private NetworkedDouble m_networkedkG; // gravity gain
+  private NetworkedDouble m_networkedkI; // integral gain
+  private NetworkedDouble m_networkedkP; // proprotional gain
+  private NetworkedDouble m_networkedKS; // static constant (static friction)
+  private NetworkedDouble m_networkedKV; // velo feed forward
 
-  private TalonFXConfiguration activeConfig;
+  private TalonFXConfiguration m_activeConfig;
 
   /**
    * Drop-in constructor for default TalonFX motor
    *
-   * @param ID motor ID
+   * @param id motor ID
    * @param canbus canbus name
    */
-  public NetworkedTalonFX(int ID, String canbus) {
-    super(ID, canbus);
+  public NetworkedTalonFX(int id, String canbus) {
+    super(id, canbus);
     instanceCount++;
 
-    this.name = "NetworkedTalonFX_" + instanceCount;
+    m_name = "NetworkedTalonFX_" + instanceCount;
   }
 
   /**
    * Drop-in constructor for default TalonFX motor (using CANBus object)
    *
-   * @param ID motor ID
+   * @param id motor ID
    * @param canbus CANBus object
    */
-  public NetworkedTalonFX(int ID, CANBus canbus) {
-    super(ID, canbus);
+  public NetworkedTalonFX(int id, CANBus canbus) {
+    super(id, canbus);
     instanceCount++;
 
-    this.name = "NetworkedTalonFX_" + instanceCount;
+    m_name = "NetworkedTalonFX_" + instanceCount;
   }
 
   /**
-   * Constructor with name setter
+   * Constructor with mname setter
    *
-   * @param ID motor ID
+   * @param id motor ID
    * @param canbus canbus name
    * @param name motor name for Network Tables
    */
-  public NetworkedTalonFX(int ID, String canbus, String name) {
-    super(ID, canbus);
+  public NetworkedTalonFX(int id, String canbus, String name) {
+    super(id, canbus);
     instanceCount++;
 
-    this.name = name;
+    m_name = name;
   }
 
   /**
    * Constructor with name setter and CANBus object support
    *
-   * @param ID motor ID
+   * @param id motor ID
    * @param canbus CANBus object
    * @param name motor name for Network Tables
    */
-  public NetworkedTalonFX(int ID, CANBus canbus, String name) {
-    super(ID, canbus);
+  public NetworkedTalonFX(int id, CANBus canbus, String name) {
+    super(id, canbus);
     instanceCount++;
 
-    this.name = name;
+    m_name = name;
   }
 
   private void setupNT(
       double kA, double kD, double kG, double kI, double kP, double kS, double kV) {
-    this.networkedKA = new NetworkedDouble("/NetworkedLib/" + this.name + "/kA", kA);
-    this.networkedkD = new NetworkedDouble("/NetworkedLib/" + this.name + "/kD", kD);
-    this.networkedkG = new NetworkedDouble("/NetworkedLib/" + this.name + "/kG", kG);
-    this.networkedkI = new NetworkedDouble("/NetworkedLib/" + this.name + "/kI", kI);
-    this.networkedkP = new NetworkedDouble("/NetworkedLib/" + this.name + "/kP", kP);
-    this.networkedKS = new NetworkedDouble("/NetworkedLib/" + this.name + "/kS", kS);
-    this.networkedKV = new NetworkedDouble("/NetworkedLib/" + this.name + "/kV", kV);
+    m_networkedKA = new NetworkedDouble("/NetworkedLib/" + m_name + "/kA", kA);
+    m_networkedkD = new NetworkedDouble("/NetworkedLib/" + m_name + "/kD", kD);
+    m_networkedkG = new NetworkedDouble("/NetworkedLib/" + m_name + "/kG", kG);
+    m_networkedkI = new NetworkedDouble("/NetworkedLib/" + m_name + "/kI", kI);
+    m_networkedkP = new NetworkedDouble("/NetworkedLib/" + m_name + "/kP", kP);
+    m_networkedKS = new NetworkedDouble("/NetworkedLib/" + m_name + "/kS", kS);
+    m_networkedKV = new NetworkedDouble("/NetworkedLib/" + m_name + "/kV", kV);
   }
 
   /**
@@ -100,17 +101,17 @@ public class NetworkedTalonFX extends TalonFX {
    * @param config The TalonFXConfiguration to apply
    */
   public void applyConfiguration(TalonFXConfiguration config) {
-    this.activeConfig = config;
+    m_activeConfig = config;
 
     this.getConfigurator().apply(config);
     setupNT(
-        activeConfig.Slot0.kA,
-        activeConfig.Slot0.kD,
-        activeConfig.Slot0.kG,
-        activeConfig.Slot0.kI,
-        activeConfig.Slot0.kP,
-        activeConfig.Slot0.kS,
-        activeConfig.Slot0.kV);
+        m_activeConfig.Slot0.kA,
+        m_activeConfig.Slot0.kD,
+        m_activeConfig.Slot0.kG,
+        m_activeConfig.Slot0.kI,
+        m_activeConfig.Slot0.kP,
+        m_activeConfig.Slot0.kS,
+        m_activeConfig.Slot0.kV);
   }
 
   /**
@@ -120,30 +121,32 @@ public class NetworkedTalonFX extends TalonFX {
    */
   public void periodic() {
     // checks if any networked doubles have new information
-    if (networkedKA.available()
-        || networkedkD.available()
-        || networkedkG.available()
-        || networkedkI.available()
-        || networkedkP.available()
-        || networkedKS.available()
-        || networkedKV.available()) {
+    if (m_networkedKA.available()
+        || m_networkedkD.available()
+        || m_networkedkG.available()
+        || m_networkedkI.available()
+        || m_networkedkP.available()
+        || m_networkedKS.available()
+        || m_networkedKV.available()) {
 
       // ensures values like gravity FF type and other are perserved
-      this.activeConfig.Slot0 = this.activeConfig
+      m_activeConfig.Slot0 = m_activeConfig
           .Slot0
-          .withKA(networkedKA.get())
-          .withKD(networkedkD.get())
-          .withKG(networkedkG.get())
-          .withKI(networkedkI.get())
-          .withKP(networkedkP.get())
-          .withKS(networkedKS.get())
-          .withKV(networkedKV.get());
+          .withKA(m_networkedKA.get())
+          .withKD(m_networkedkD.get())
+          .withKG(m_networkedkG.get())
+          .withKI(m_networkedkI.get())
+          .withKP(m_networkedkP.get())
+          .withKS(m_networkedKS.get())
+          .withKV(m_networkedKV.get());
 
-      // the reason we arent directly applying slot0Configs is because it leaves open more stuff to
+      // the reason we arent directly applying slot0Configs is because it leaves open
+      // more stuff to
       // add to the networked possiblities later.
-      // in the future we could network other parts of the config (like current limits!)
+      // in the future we could network other parts of the config (like current
+      // limits!)
 
-      this.getConfigurator().apply(this.activeConfig);
+      this.getConfigurator().apply(m_activeConfig);
     }
   }
 }

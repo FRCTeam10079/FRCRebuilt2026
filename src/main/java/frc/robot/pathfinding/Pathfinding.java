@@ -11,7 +11,6 @@ import java.util.List;
  * references.
  */
 public final class Pathfinding {
-
   private static Pathfinder pathfinder = null;
 
   private Pathfinding() {}
