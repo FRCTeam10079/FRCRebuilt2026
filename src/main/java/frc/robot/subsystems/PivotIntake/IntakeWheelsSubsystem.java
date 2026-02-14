@@ -13,8 +13,10 @@ import frc.robot.generated.TunerConstants;
 
 public class IntakeWheelsSubsystem extends SubsystemBase {
 
-  private final TalonFX intakeMotor = new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
-  private final VelocityVoltage m_velocityRequest = new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
+  private final TalonFX intakeMotor =
+      new TalonFX(IntakeConstants.Wheels.MOTOR_ID, TunerConstants.kCANBus);
+  private final VelocityVoltage m_velocityRequest =
+      new VelocityVoltage(0).withSlot(0).withEnableFOC(true);
 
   public IntakeWheelsSubsystem() {
     configureIntakeMotor();
