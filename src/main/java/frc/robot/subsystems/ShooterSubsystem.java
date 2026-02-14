@@ -56,9 +56,9 @@ public class ShooterSubsystem extends SubsystemBase {
 
   /** Creates a new ShooterSubsystem */
   public ShooterSubsystem() {
-    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID, "rio");
+    m_masterMotor = new TalonFX(ShooterConstants.MASTER_MOTOR_ID);
     // DUAL MOTOR: Uncomment for 2-motor setup
-    m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID, "rio");
+    m_slaveMotor = new TalonFX(ShooterConstants.SLAVE_MOTOR_ID);
 
     configureMotors();
 
